@@ -1,0 +1,31 @@
+# ----- Python -----
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# ----- Local presentation material (real manga pages / CBZ) -----
+backend/data/samples/
+*.cbz
+
+# ----- Local template DB artifacts -----
+backend/pipeline/ocr/templates_db/
+backend/data/fonts/
+
+# ----- Course practice materials (reference only, not project code) -----
+atividadesPraticas/
+
+# ----- Local-only scratch files / notes -----
+# Anything used only on this machine goes here and stays out of the repo.
+local/
+
+# Stray local markdown at the repo root is kept out of the repo,
+# except the project README and the docs folder.
+*.md
+!README.md
+!docs/**/*.md
+
+# ----- Editor / OS -----
+.DS_Store
+.idea/
+.vscode/

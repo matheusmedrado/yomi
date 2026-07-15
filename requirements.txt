@@ -1,0 +1,15 @@
+# Backend web framework
+Flask>=3.0
+
+# Image processing (course core)
+opencv-python>=4.9
+numpy>=1.26
+
+# Template database font rendering
+Pillow>=10.0
+
+# Rule-based Japanese reading (furigana/romaji) - not AI
+pykakasi>=2.2
+
+# Dev / testing
+pytest>=8.0
