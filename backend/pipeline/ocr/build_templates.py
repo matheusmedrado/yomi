@@ -22,9 +22,10 @@ KATAKANA = list("アイウエオカキクケコサシスセソタチツテトナ
                 "ガギグゲゴザジズゼゾダヂヅデドバビブベボパピプペポッャュョヴ")
 
 KANJI_N5 = list(set("一二三四五六七八九十百千万円時分週秒前後朝昼夜春夏秋冬年月日火水木金土天気雨雪空海山川"
-                    "花草木虫魚鳥肉食飲買売話聞読書字名前会社人男女子母父兄姉弟友達学生先生上司外国人私中"
-                    "日本語国公立大小高低長短新古若老白黒青赤色声音目耳鼻口手足体頭心肺血中気力心正反左右"
-                    "東西南北内外中外出入返休仕事学教室旅店屋茶酒肉卵米麦道車電話番地地図北風好悪寒暑明暗"))
+                     "花草木虫魚鳥肉食飲買売話聞読書字名前会社人男女子母父兄姉弟友達学生先生上司外国人私中"
+                     "日本語国公立大小高低長短新古若老白黒青赤色声音目耳鼻口手足体頭心肺血中気力心正反左右"
+                     "東西南北内外中外出入返休仕事学教室旅店屋茶酒肉卵米麦道車電話番地地図北風好悪寒暑明暗"
+                     "東京勉強方行猫都合間物店買食走路見思出開立回道具目玉歯舌頭首胸腹足腰手紙筆硯刀剣"))
 
 FONT_CANDIDATES = [
     "/usr/share/fonts/noto-cjk",
@@ -68,12 +69,16 @@ def render_glyph(char: str, font: ImageFont.FreeTypeFont) -> np.ndarray:
 
 
 def build_templates(db_path: str = DB_PATH) -> dict:
+    from pipeline.ocr.bitmap import build_halo_packed, glyph_to_bitmap, _pack
     from pipeline.ocr.normalize import normalize_glyph
 
     fonts = _available_fonts()
     images: list[np.ndarray] = []
     labels: list[str] = []
     font_names: list[str] = []
+    bitmaps_packed: list[np.ndarray] = []
+    ref_pixels: list[int] = []
+    ref_halos: list[list[np.ndarray]] = []
 
     chars = HIRAGANA + KATAKANA + KANJI_N5
     for path, index, fname in fonts:
@@ -85,9 +90,19 @@ def build_templates(db_path: str = DB_PATH) -> dict:
             normalized = normalize_glyph(gray, size=CANVAS)
             if normalized.sum() < 20:
                 continue
+            bitmap = glyph_to_bitmap(normalized)
             images.append(normalized)
             labels.append(char)
             font_names.append(fname)
+            bitmaps_packed.append(_pack(bitmap))
+            ref_pixels.append(int(bitmap.sum()))
+            ref_halos.append(build_halo_packed(bitmap))
+
+    n = len(images)
+    packed = np.stack(bitmaps_packed).astype(np.uint64)
+    pixels = np.array(ref_pixels, dtype=np.int64)
+    halos = [np.stack([ref_halos[i][layer] for i in range(n)]).astype(np.uint64)
+             for layer in range(len(ref_halos[0]))]
 
     payload = {
         "images": np.stack(images).astype(np.uint8),
@@ -95,6 +110,9 @@ def build_templates(db_path: str = DB_PATH) -> dict:
         "fonts": font_names,
         "size": CANVAS,
         "chars": sorted(set(labels)),
+        "bitmaps_packed": packed,
+        "ref_pixels": pixels,
+        "ref_halos": halos,
     }
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
     with open(db_path, "wb") as fh:

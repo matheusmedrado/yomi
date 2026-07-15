@@ -15,13 +15,14 @@ class Glyph:
     w: int
     h: int
     image: np.ndarray
+    y_line: int = 0
 
 
 def segment_glyphs(
     gray: np.ndarray,
     size: int = 64,
     min_area: int = 20,
-    merge_gap: int = 5,
+    merge_gap: int = 8,
     line_tol_factor: float = 0.4,
 ) -> list[Glyph]:
     binary = to_binary(gray)
@@ -61,7 +62,10 @@ def segment_glyphs(
             continue
         gap = x - gx1
         y_overlap = not (y + ch < gy0 - y_tol or y > gy1 + y_tol)
-        if gap <= merge_gap and y_overlap:
+        x_overlap = not (x > gx1 or gx0 > x + cw)
+        combined_w = max(gx1, x + cw) - min(gx0, x)
+        cell_limit = 1.2 * max(gy1 - gy0, ch)
+        if gap <= merge_gap and y_overlap and (x_overlap or combined_w <= cell_limit):
             current.append((x, y, cw, ch))
             gx0 = min(gx0, x)
             gy0 = min(gy0, y)

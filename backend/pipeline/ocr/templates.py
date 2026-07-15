@@ -21,6 +21,9 @@ class TemplateDB:
     fonts: list[str]
     size: int
     chars: list[str]
+    bitmaps_packed: np.ndarray | None = None
+    ref_pixels: np.ndarray | None = None
+    ref_halos: list[np.ndarray] | None = None
 
     @classmethod
     def load(cls, db_path: str = DEFAULT_DB) -> "TemplateDB":
@@ -37,6 +40,9 @@ class TemplateDB:
             fonts=data["fonts"],
             size=int(data["size"]),
             chars=list(data["chars"]),
+            bitmaps_packed=data.get("bitmaps_packed"),
+            ref_pixels=data.get("ref_pixels"),
+            ref_halos=data.get("ref_halos"),
         )
 
     def unique_labels(self) -> list[str]:

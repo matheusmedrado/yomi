@@ -2,40 +2,27 @@ from __future__ import annotations
 
 import numpy as np
 
-from pipeline.ocr import char_segment, features
+from pipeline.ocr import char_segment
+from pipeline.ocr.bitmap import BitmapClassifier
 from pipeline.ocr.templates import TemplateDB
-
-ALPHA = 1.5
 
 
 class TemplateClassifier:
-    def __init__(self, db: TemplateDB, grid: int = 8):
+    def __init__(self, db: TemplateDB, grid: int = 8, top_k: int = 80):
+        if db.bitmaps_packed is None:
+            raise ValueError(
+                "Banco de templates sem bitmaps. Regere o banco com "
+                "python backend/pipeline/ocr/build_templates.py"
+            )
         self.db = db
-        self.grid = grid
-        self.zoning = np.stack(
-            [features.zoning_vector(img, grid) for img in db.images]
-        ).astype(np.float32)
-        flat = self.db.images.reshape(len(self.db.images), -1).astype(np.float32)
-        self._tpl_flat = flat
-        self._tpl_norm = np.linalg.norm(flat, axis=1)
+        self.classifier = BitmapClassifier(
+            db.bitmaps_packed, db.ref_pixels, db.ref_halos, db.labels, top_k=top_k
+        )
 
-    def _correlations(self, glyph: np.ndarray) -> np.ndarray:
-        q = glyph.reshape(-1).astype(np.float32)
-        q_norm = np.linalg.norm(q)
-        if q_norm == 0:
-            return np.zeros(len(self.db.images), dtype=np.float32)
-        return (self._tpl_flat @ q) / (self._tpl_norm * q_norm)
+    def classify(self, glyph: np.ndarray, k: int = 3, alpha: float | None = None) -> tuple[str, float]:
+        return self.classifier.classify(glyph, k=k, alpha=alpha)
 
-    def classify(self, glyph: np.ndarray, k: int = 3, alpha: float = ALPHA) -> tuple[str, float]:
-        q = features.zoning_vector(glyph, self.grid)
-        dists = np.abs(self.zoning - q).sum(axis=1)
-        corr = self._correlations(glyph)
-        score = corr - alpha * (dists / max(dists.max(), 1e-6))
-        idx = int(np.argmax(score))
-        confidence = max(0.0, min(1.0, (float(corr[idx]) + 1.0) / 2.0))
-        return self.db.labels[idx], confidence
-
-    def ocr_region(self, gray: np.ndarray, k: int = 3, alpha: float = ALPHA) -> dict:
+    def ocr_region(self, gray: np.ndarray, k: int = 3, alpha: float | None = None) -> dict:
         glyphs = char_segment.segment_glyphs(gray)
         chars: list[str] = []
         details: list[dict] = []
