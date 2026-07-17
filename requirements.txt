@@ -1,15 +1,19 @@
 # Backend web framework
 Flask>=3.0
+Flask-Cors>=4.0
 
-# Image processing (course core)
+# Image processing (course core - classical PDI pipeline)
 opencv-python>=4.9
 numpy>=1.26
-
-# Template database font rendering
 Pillow>=10.0
 
-# Rule-based Japanese reading (furigana/romaji) - not AI
+# Rule-based Japanese reading (furigana/romaji) - rule-based, not AI
 pykakasi>=2.2
+
+# OCR (modern, transformer-based; trained specifically on manga text;
+# authorized by the professor for the recognition stage only).
+# `manga-ocr` pulls torch and transformers as transitive deps.
+manga-ocr>=0.1.15
 
 # Dev / testing
 pytest>=8.0

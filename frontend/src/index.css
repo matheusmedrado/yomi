@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background-color: theme("colors.paper.DEFAULT");
+    color: theme("colors.ink.DEFAULT");
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  /* Editorial micro-typography */
+  ::selection {
+    background-color: theme("colors.ink.DEFAULT");
+    color: theme("colors.paper.DEFAULT");
+  }
+}
+
+@layer components {
+  .kd-kicker {
+    @apply uppercase tracking-smallcaps text-[11px] font-semibold text-ink-muted;
+  }
+  .kd-heading {
+    @apply font-serif text-ink leading-[1.05] tracking-[-0.01em];
+  }
+  .kd-card {
+    @apply bg-paper-warm border border-paper-shadow;
+  }
+  .kd-divider {
+    @apply h-px w-full bg-ink/10;
+  }
+  .kd-btn {
+    @apply inline-flex items-center gap-2 px-4 py-2 border border-ink text-ink
+           hover:bg-ink hover:text-paper transition-colors duration-150
+           text-sm font-medium tracking-wide;
+  }
+  .kd-btn-ghost {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 text-ink-muted
+           hover:text-ink transition-colors duration-150 text-sm;
+  }
+}
+
+/* Custom thin scrollbar — feels editorial, not consumer-app */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(10, 10, 10, 0.15);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(10, 10, 10, 0.3);
+}

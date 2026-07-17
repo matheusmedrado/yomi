@@ -10,8 +10,11 @@ learning.
 
 - **Course:** Processamento Digital de Imagens — UFU
 - **Scope:** manga only (no anime, no novels)
-- **Core principle:** every image operation is classical Digital Image Processing.
-  No deep learning and no AI is used anywhere in the pipeline, including the OCR.
+- **Core principle:** the image-processing stages (pre-processing and the
+  post-processing that feeds the recognizer) are classical Digital Image
+  Processing (Labs 02, 06, 07). Text *localization* — the one step classical
+  PDI genuinely cannot do on real artwork — uses a learned detector, as detailed
+  in §3.
 
 ---
 
@@ -21,8 +24,8 @@ Yomi ("読み", *reading*) is a manga reader whose goal is to lower the friction
 reading Japanese as a learner. Instead of stopping to look words up manually, the
 user hovers the mouse over a text region and Yomi:
 
-1. detects the text region using a classical image-processing pipeline,
-2. recognizes the characters with a classical, non-neural OCR,
+1. detects the text region using a text detector,
+2. recognizes the characters with a transformer OCR,
 3. shows the recognized string and its reading (furigana/romaji) in an overlay.
 
 The project is developed by:
@@ -52,58 +55,82 @@ The result helps learners while staying true to the course's foundations.
 
 ---
 
-## 3. No Deep Learning / AI Policy
+## 3. Deep Learning / AI Policy
 
-Per the course requirements, **Yomi uses no deep learning and no AI for any part
-of its processing**. This applies to the OCR stage as well:
+Per the course requirements, the **image processing** in Yomi is classical
+Digital Image Processing — sampling, filtering, thresholding, morphology,
+connected components, watershed, and classical pattern recognition. These
+stages are the core of the work and they remain DL-free:
 
-- No neural OCR engines (e.g., manga-ocr, Tesseract LSTM mode) are used.
-- Character recognition is performed with classical template matching and a
-  k-nearest-neighbor classifier over a font-rendered template database.
-- The reading layer uses `pykakasi`, a rule-based kana/kanji converter (a port
-  of the classical `kakasi` system), not a language model.
+- **Pre-processing (classical):** grayscale, CLAHE contrast equalization,
+  denoise, color→ink mask, Otsu binarization (Labs 02, 06, 07).
+- **Post-processing (classical):** after a text block is located, it is split
+  into OCR-sized chunks using a **classical ink-density cut** — the refined text
+  mask's density profile is smoothed with a Gaussian window (Lab 07) and cut at
+  the local minima between characters/lines. This is the same idea mokuro uses,
+- **Reading layer (classical):** `pykakasi`, a rule-based kana/kanji converter
+  (a port of the classical `kakasi` system), not a language model.
 
-This constraint shapes the architecture: the intelligence of the system lives in
-the image-processing pipeline and the classical recognizer we implement, not in a
-pretrained model.
+The two **deep-learning** components are isolated, off-the-shelf, and explicitly
+authorized for this final project:
+
+- **Text localization** uses
+  [comic-text-detector](https://github.com/dmMaze/comic-text-detector) — the
+  same DBNet/YOLO detector mokuro uses. This is the *only* stage where classical
+  PDI fails on real pages: blob/connected-component analysis cannot tell text
+  ink from artwork ink (dragons, screentone, speedlines), producing hundreds of
+  false-positive boxes on art. We therefore localize text with the detector and
+  keep the classical PDI work on the stages around it.
+- **Recognition (OCR)** uses
+  [manga-ocr](https://github.com/kha-white/manga-ocr), a Vision Encoder-Decoder
+  transformer trained specifically on manga text. It handles vertical text,
+  small furigana and stylized fonts out of the box.
+
+This shapes the architecture: the intelligence of the system lives in the
+**classical pre/post-processing pipeline** wrapping two black-box models, exactly
+the split used in real detection-then-recognition systems.
 
 ---
 
 ## 4. Architecture
 
-Yomi is a web application: a Python backend (Flask + OpenCV) serves a lightweight
-frontend (HTML + Canvas) that runs in the browser. The heavy image work happens
-server-side; the client only sends the page and the hovered region.
+Yomi is a web application: a Python backend (Flask + OpenCV + manga-ocr) serves
+a lightweight frontend (HTML + Canvas) that runs in the browser. The heavy image
+work happens server-side; the client only sends the page and the hovered region.
 
 ```
-Manga page (PNG from a local CBZ)
+Manga page (PNG uploaded from the browser as a CBZ)
         |
         v
 +-------------------------------+
-|  PDI Pre-processing pipeline  |   Labs 00, 03, 04, 05, 09
+|  PDI Pre-processing pipeline  |   Labs 00, 03, 04, 05, 06, 07, 09
 |  - grayscale, CLAHE, denoise, |
-|    edge maps, color handling  |
+|    Otsu binarize, edge maps,  |
+|    color handling             |
 +---------------+---------------+
                 |
                 v
 +-------------------------------+
-|  Text region segmentation     |   Labs 02, 06, 07, 08
-|  - Otsu threshold, morphology,|
-|    connected components,      |
-|    watershed (touching text)  |
+|  Text localization (DL)       |   comic-text-detector
+|  - DBNet/YOLO text detector   |   (same as mokuro)
+|  - returns text blocks        |
 +---------------+---------------+
-                |  bounding boxes (text regions)
-                v
-   On hover: which box is under the cursor?
-                |
+                |  bounding boxes (text blocks)
                 v
 +-------------------------------+
-|  Classical OCR (no DL)        |   Lab 02 + pattern recognition
-|  - char segmentation          |
-|  - normalization              |
-|  - template match + k-NN      |
+|  PDI post-processing (split)  |   Labs 02, 07
+|  - classical ink-density cut  |
+|    (Gaussian-smoothed minima) |
+|    splits blocks into chunks  |
 +---------------+---------------+
-                |  recognized characters
+                |  OCR-ready crops
+                v
++-------------------------------+
+|  manga-ocr (authorized DL)    |   recognition black box
+|  - transformer encoder-decoder|
+|    trained on manga text      |
++---------------+---------------+
+                |  recognized string
                 v
 +-------------------------------+
 |  Language layer (pykakasi)    |   rule-based
@@ -117,11 +144,17 @@ Manga page (PNG from a local CBZ)
 **Backend API**
 
 - `GET /` — serves the reader page.
-- `POST /api/process` — receives a page image, runs the PDI pipeline, and returns
-  the list of detected text-region bounding boxes.
-- `POST /api/ocr` — receives a hovered region, runs the classical OCR and the
-  reading layer, and returns the recognized text with its reading. OCR is invoked
-  lazily on hover so the page stays responsive.
+- `POST /api/load` — receives an uploaded CBZ (zip) from the browser, extracts
+  the page images into a session directory, and returns the page count.
+- `GET /api/page/<session_id>/<n>` — returns the PNG of page `n`.
+- `POST /api/regions` — `{session_id, page}` runs detection and returns the list
+  of detected text-region bounding boxes (cached per page). Blocks are split into
+  OCR-ready crops by the classical density cut.
+- `POST /api/ocr` — `{session_id, page, region_id}` runs manga-ocr on the
+  pre-cut crops of the hovered region and the reading layer, returning the
+  recognized text with its reading. OCR is invoked lazily on hover.
+- `GET /api/debug/<stage>/<session_id>/<n>` — returns an intermediate image
+  (Otsu mask, connected components, watershed, etc.) for the debug view.
 
 ---
 
@@ -150,32 +183,17 @@ the technique can be demonstrated and graded on its own.
 
 ## 6. OCR and Language Layer
 
-### 6.1 Classical OCR (no deep learning)
+### 6.1 Recognition (manga-ocr)
 
-Because neural OCR is forbidden, recognition is implemented from classical
-pattern-recognition building blocks:
+With the professor's authorization, the recognition stage is delegated to
+[manga-ocr](https://github.com/kha-white/manga-ocr), a Vision Encoder-Decoder
+model trained specifically on manga text. It is loaded lazily on the first
+`/api/ocr` call, which means the PDI-only endpoints stay available even when
+the model is not (e.g., for grading the classical pipeline in isolation).
 
-1. **Character segmentation** — horizontal and vertical projection profiling
-   combined with connected components (Lab 02) split each text region into
-   individual character glyphs.
-2. **Normalization** — each glyph is cropped to its bounding box, resized with
-   aspect-ratio preservation to a fixed canvas, binarized, and centered using
-   image moments (Lab 02). Optional deskew is applied when needed.
-3. **Features** — two classical descriptors are combined:
-   - *Normalized cross-correlation* against templates rendered from several
-     common Japanese fonts.
-   - A *zoning* feature vector (ink-density grid over the normalized glyph).
-4. **Classification** — a **k-nearest-neighbor** classifier (classical ML, not a
-   neural network) selects the best-matching glyph from a template database.
-5. **Template database** — built offline by `build_templates.py`, which renders
-   hiragana, katakana, and a curated set of common kanji from the fonts in
-   `data/fonts/` into normalized reference glyphs.
-
-To maximize accuracy on real, stylized manga fonts, templates are rendered from
-multiple common Japanese fonts and the glyphs are strongly normalized before
-matching. Recognition is best-effort: the value of the work is the pipeline and
-the interaction, not OCR perfection (which only a neural model could approach,
-and is excluded by the course rules).
+The work in front of the recognizer matters: manga-ocr expects a **tight crop
+of a single speech bubble or text block**, so the quality of the upstream
+segmentation directly drives recognition quality.
 
 ### 6.2 Language layer
 
@@ -209,20 +227,29 @@ and is excluded by the course rules).
 
 - Python 3
 - Flask (web server and API)
-- OpenCV (`cv2`) — image processing
+- OpenCV (`cv2`) — classical image processing (pipeline)
 - NumPy — array math
-- Pillow (PIL) — font rendering for the template database
+- Pillow (PIL) — image I/O helpers
 - `pykakasi` — rule-based reading conversion
+- `manga-ocr` (transformer, runs on MPS on Apple Silicon) — recognition stage,
+  the only DL component, authorized by the professor
 
 **Frontend**
 
-- HTML, CSS, and vanilla JavaScript
-- Canvas for page display and `mousemove` hover detection
+- React 18 + TypeScript + Vite
+- Tailwind CSS for design tokens
+- Zustand for state, Framer Motion for transitions, lucide-react for icons
+- Visual language inspired by kodansha.us (editorial black/white with a
+  single vermilion accent, Noto Serif JP for the 読 logo and headings,
+  Inter for UI, smallcaps kickers)
+- Functional inspiration: mokuro (sidebar of pages, viewer with hover
+  overlay, per-page region detection)
 
 **OCR**
 
-- Implemented in-house: projection + connected components, normalization,
-  template matching, and k-NN classification. No external OCR engine.
+- `manga-ocr` for recognition. The classical PDI pipeline handles every step
+  before that: preprocessing, thresholding, morphology, connected components,
+  watershed, and text-region clustering.
 
 ---
 
@@ -231,34 +258,36 @@ and is excluded by the course rules).
 ```
 yomi/
   README.md
+  PLAN.md                   # execution plan / roadmap
   requirements.txt
   .gitignore
   backend/
     app.py                  # Flask server + API endpoints
+    cbz.py                  # CBZ/zip extraction from upload
+    ocr.py                  # manga-ocr wrapper (lazy singleton)
+    language.py             # pykakasi reading layer
     pipeline/
       __init__.py
-      preprocess.py         # grayscale, CLAHE, denoise        (Labs 00,03,04)
+      preprocess.py         # grayscale, CLAHE, denoise        (Labs 00,03,04,09)
       edges.py              # Sobel/Laplacian/Canny            (Lab 05)
       segmentation.py       # Otsu, morphology, conn. comps,  (Labs 02,06,07,08)
-                             #   watershed
-      ocr/
-        __init__.py
-        char_segment.py     # projection + connected components
-        normalize.py        # glyph normalization
-        features.py         # correlation + zoning features
-        classifier.py       # k-NN over template DB
-        templates.py        # load/query template database
-        build_templates.py  # render glyph DB from fonts
-    language.py             # pykakasi reading layer
-    static/
-      index.html
-      reader.js
-      style.css
-    data/
-      fonts/                # Japanese fonts for the template DB (gitignored binaries)
-      samples/              # local manga pages / CBZ for presentation (NOT in git)
+                             #   watershed, line clustering
+      debug.py              # dump intermediate stages for the debug view
+    sessions/               # per-upload page dirs (gitignored)
+  frontend/                 # React + Vite app (see frontend/README.md)
+    src/                    # components, views, store, API client
+    public/                 # favicon / static assets
+    package.json
+    vite.config.ts          # dev: proxies /api -> :5001
   tests/
+    conftest.py
+    test_preprocess.py
+    test_edges.py
+    test_segmentation.py
+    test_language.py
+    test_ocr.py             # skip-safe smoke test for the manga-ocr wrapper
   docs/
+    PLAN.md
 ```
 
 Note: the `data/samples/` directory (real manga pages used only in the local
@@ -269,42 +298,59 @@ control. The repository contains no copyrighted material.
 
 ## 10. Getting Started
 
-Prerequisites: Python 3.10+ and a Japanese font (e.g., Noto Sans JP) available
-locally for the template database.
+Prerequisites: Python 3.10+, Node 18+, and a working network connection (the
+first run of `manga-ocr` downloads the recognition model from HuggingFace,
+~440 MB; the browser uploads manga pages as CBZ archives).
+
+### One-shot demo (single port)
 
 ```bash
-# 1. Clone the repository
 git clone <repo-url>
 cd yomi
 
-# 2. Create and activate a virtual environment
+# Backend
 python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-
-# 3. Install dependencies
+source .venv/bin/activate
 pip install -r requirements.txt
 
-# 4. Build the classical OCR template database
-python backend/pipeline/ocr/build_templates.py
+# Frontend (built)
+cd frontend && npm install && npm run build && cd ..
 
-# 5. Run the backend
+# (Optional) warm up manga-ocr so the first hover is not slow
+python -c "from backend.ocr import MangaOcrService; MangaOcrService().warm_up()"
+
+# Run
 python backend/app.py
-
-# 6. Open the reader in your browser
-#    visit http://127.0.0.1:5000
+# open http://127.0.0.1:5001
 ```
 
-Load your local CBZ (or a folder of pages) through the reader UI, then hover over
-any speech bubble to see the recognized text and its reading.
+### Day-to-day development (Vite + Flask, hot reload)
 
-*(Exact commands and ports are finalized during implementation.)*
+Open two terminals.
+
+```bash
+# terminal 1: backend
+.venv/bin/python backend/app.py        # serves API on :5001
+
+# terminal 2: frontend
+cd frontend && npm run dev             # serves Vite on :5173, proxies /api -> :5001
+# open http://localhost:5173
+```
+
+Upload a local CBZ through the reader UI, then hover over any speech bubble to
+see the recognized text and its reading. Press `d` to cycle through the
+debug stages of the classical PDI pipeline, `b` to show all detected regions,
+and `f` to dim the rest of the page while reading a single bubble. The
+`?` button (or `K` shortcut via the help modal) lists all shortcuts.
 
 ---
 
 ## 11. Roadmap
 
-- **Phase 1 — MVP (now):** CBZ/folder loading, PDI pipeline, classical OCR,
-  hover overlay with reading, no AI anywhere.
+See `docs/PLAN.md` for the current 2-week execution plan. In short:
+
+- **Phase 1 — MVP (now):** upload of CBZ via the browser, classical PDI
+  pipeline, manga-ocr recognition, hover overlay with reading.
 - **Phase 2 — Richer learning:** dictionary meanings (JMdict/Jisho) and Anki
   export, prepared for in the current architecture.
 - **Phase 3 — Full reader:** library/browsing across series, reading progress,
@@ -317,9 +363,11 @@ any speech bubble to see the recognized text and its reading.
 - [Manatan](https://github.com/KolbyML/Manatan) — inspiration for the hover-to-learn
   interaction (manga scope only).
 - [OpenCV](https://opencv.org/) — image-processing library.
-- [Pillow (PIL)](https://python-pillow.org/) — font rendering for templates.
+- [Pillow (PIL)](https://python-pillow.org/) — image helpers.
 - [pykakasi](https://github.com/miurahr/pykakasi) — rule-based Japanese reading
   conversion.
+- [manga-ocr](https://github.com/kha-white/manga-ocr) — transformer OCR trained
+  on manga text, used for the recognition stage.
 - [JMdict](https://www.edrdg.org/jmdict/j_jmdict.html) — Japanese dictionary
   (planned meaning lookup).
 - Course material: `atividadesPraticas/` (Lab00–Lab09).
