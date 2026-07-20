@@ -40,10 +40,9 @@ export function UploadScreen() {
   );
 
   return (
-    <div className="min-h-full flex flex-col items-center justify-center px-6 py-12 bg-paper relative overflow-hidden">
-      {/* Decorative gridlines, very faint, editorial */}
+    <div className="min-h-full flex flex-col items-center justify-center px-6 py-16 bg-paper relative overflow-hidden">
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.04]"
+        className="pointer-events-none absolute inset-0 opacity-[0.03]"
         style={{
           backgroundImage:
             "linear-gradient(to right, #0a0a0a 1px, transparent 1px), linear-gradient(to bottom, #0a0a0a 1px, transparent 1px)",
@@ -55,23 +54,37 @@ export function UploadScreen() {
         initial={{ y: 12, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.4, ease: [0.2, 0.7, 0.1, 1] }}
-        className="relative z-10 flex flex-col items-center text-center max-w-2xl w-full"
+        className="relative z-10 flex flex-col items-center text-center max-w-3xl w-full"
       >
-        <YomiLogo size={72} />
+        <YomiLogo size={80} />
 
-        <div className="mt-6 flex items-center gap-3">
-          <span className="kd-kicker">Yomi — 読み</span>
-          <span className="h-px w-8 bg-ink/30" />
-          <span className="kd-kicker text-ink-muted/80">UFU · PDI</span>
+        <div className="mt-8 flex items-center gap-2">
+          <span className="kd-kicker text-sm">読み</span>
+          <span className="kd-kicker text-sm text-vermilion">·</span>
+          <span className="kd-kicker text-sm">YOMI</span>
         </div>
 
-        <h1 className="kd-heading mt-4 text-5xl md:text-6xl">
-          Read&nbsp;manga, hover, learn.
-        </h1>
-        <p className="mt-5 text-ink-muted text-base md:text-lg max-w-md leading-relaxed">
-          A manga reader that detects speech bubbles with classical image
-          processing and shows you the reading on hover. Drop a CBZ to begin.
-        </p>
+        <motion.h1
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="kd-heading mt-6 text-5xl md:text-6xl lg:text-7xl leading-tight"
+        >
+          <span className="whitespace-nowrap">Leia mangá em japonês.</span>
+          <br />
+          <span className="text-vermilion">Passe o mouse.</span> Aprenda.
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.35, duration: 0.5 }}
+          className="mt-8 text-ink-muted text-lg md:text-xl max-w-2xl leading-relaxed"
+        >
+          Um leitor de mangá que detecta balões de fala com processamento
+          clássico de imagens e mostra a leitura, tradução e análise dos kanjis
+          ao passar o mouse. Clique para criar cards de estudo.
+        </motion.p>
 
         <div
           onDragOver={(e) => {
@@ -87,12 +100,12 @@ export function UploadScreen() {
           }}
           onClick={() => inputRef.current?.click()}
           className={[
-            "mt-10 w-full max-w-xl cursor-pointer border border-dashed",
+            "mt-12 w-full max-w-2xl cursor-pointer border border-dashed",
             "transition-all duration-200 ease-out",
             isOver
               ? "border-vermilion bg-vermilion/[0.04] scale-[1.01]"
               : "border-ink/30 hover:border-ink hover:bg-paper-warm",
-            "p-12 flex flex-col items-center gap-4",
+            "p-16 flex flex-col items-center gap-5",
           ].join(" ")}
         >
           <input
@@ -114,29 +127,29 @@ export function UploadScreen() {
                 exit={{ opacity: 0 }}
                 className="flex flex-col items-center gap-3"
               >
-                <div className="h-8 w-8 border-2 border-ink border-t-transparent rounded-full animate-spin" />
-                <p className="kd-kicker">Extracting pages…</p>
+                <div className="h-10 w-10 border-2 border-ink border-t-transparent rounded-full animate-spin" />
+                <p className="kd-kicker text-base">Extraindo páginas…</p>
               </motion.div>
             ) : picked ? (
               <motion.div
                 key="picked"
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col items-center gap-2"
+                className="flex flex-col items-center gap-3"
               >
-                <FileArchive className="h-8 w-8 text-ink" />
-                <p className="font-mono text-sm">{picked.name}</p>
+                <FileArchive className="h-10 w-10 text-ink" />
+                <p className="font-mono text-base">{picked.name}</p>
               </motion.div>
             ) : (
               <motion.div
                 key="empty"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center gap-3"
+                className="flex flex-col items-center gap-4"
               >
-                <UploadCloud className="h-10 w-10 text-ink" />
-                <p className="kd-kicker">Drop a CBZ here</p>
-                <p className="text-ink-muted text-sm">or click to browse</p>
+                <UploadCloud className="h-12 w-12 text-ink" />
+                <p className="kd-kicker text-lg">Solte um CBZ aqui</p>
+                <p className="text-ink-muted text-base">ou clique para procurar</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -148,45 +161,56 @@ export function UploadScreen() {
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="mt-4 flex items-center gap-2 text-vermilion text-sm"
+              className="mt-6 flex items-center gap-2 text-vermilion text-base"
             >
-              <AlertCircle className="h-4 w-4" />
+              <AlertCircle className="h-5 w-5" />
               <span>{uploadError}</span>
             </motion.div>
           )}
         </AnimatePresence>
 
-        <div className="mt-12 grid grid-cols-3 gap-6 text-left max-w-xl w-full">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+          className="mt-16 grid grid-cols-3 gap-10 text-left max-w-3xl w-full"
+        >
           {[
             {
               k: "01",
-              t: "Open a page",
-              d: "Pages render in the reader. Pan and zoom with the mouse.",
+              t: "Abra uma página",
+              d: "Navegue pelas páginas do mangá com zoom e pan.",
             },
             {
               k: "02",
-              t: "Hover a bubble",
-              d: "We detect the text region with Otsu, morphology, and watershed.",
+              t: "Passe o mouse",
+              d: "Veja a leitura, tradução e análise dos kanjis em tempo real.",
             },
             {
               k: "03",
-              t: "Read the reading",
-              d: "Recognition and furigana show up next to the cursor.",
+              t: "Clique para estudar",
+              d: "Crie cards de estudo e exporte para o Anki.",
             },
-          ].map((s) => (
-            <div key={s.k} className="border-t border-ink/20 pt-3">
-              <p className="font-mono text-[10px] text-ink-muted">{s.k}</p>
-              <p className="mt-2 text-sm font-semibold">{s.t}</p>
-              <p className="mt-1 text-xs text-ink-muted leading-relaxed">
+          ].map((s, i) => (
+            <motion.div
+              key={s.k}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 + i * 0.1, duration: 0.4 }}
+              className="border-t border-ink/20 pt-4"
+            >
+              <p className="font-mono text-xs text-ink-muted">{s.k}</p>
+              <p className="mt-3 text-base font-semibold">{s.t}</p>
+              <p className="mt-2 text-sm text-ink-muted leading-relaxed">
                 {s.d}
               </p>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </motion.div>
 
-      <footer className="relative z-10 mt-16 kd-kicker text-ink-muted/70">
-        Final project · Processamento Digital de Imagens · UFU
+      <footer className="relative z-10 mt-20 kd-kicker text-sm text-ink-muted/70">
+        Projeto final · Processamento Digital de Imagens · UFU
       </footer>
     </div>
   );

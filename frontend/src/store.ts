@@ -1,17 +1,10 @@
 import { create } from "zustand";
-import type { OcrResult, TextRegion, AppView, DebugStage } from "./types";
-
-export interface HistoryEntry extends OcrResult {
-  page: number;
-  ts: number;
-}
+import type { OcrResult, TextRegion, AppView, DebugStage, StudyCard } from "./types";
 
 interface UiState {
-  // View
   view: AppView;
   setView: (v: AppView) => void;
 
-  // Session
   sessionId: string | null;
   title: string | null;
   totalPages: number;
@@ -19,24 +12,25 @@ interface UiState {
   setSession: (s: { sessionId: string; pages: number; title?: string }) => void;
   setCurrentPage: (p: number) => void;
 
-  // Image natural size per page (for coordinate mapping)
   pageSizeByPage: Record<number, { w: number; h: number }>;
   setPageSize: (page: number, s: { w: number; h: number }) => void;
 
-  // Regions per page (cached in-memory)
   regionsByPage: Record<number, TextRegion[]>;
   setRegions: (page: number, regions: TextRegion[]) => void;
 
-  // OCR cache: key = `${page}:${regionId}` -> OcrResult
   ocrCache: Record<string, OcrResult>;
   cacheOcr: (key: string, result: OcrResult) => void;
 
-  // History (in-session)
-  history: HistoryEntry[];
-  pushHistory: (entry: HistoryEntry) => void;
-  clearHistory: () => void;
+  cards: StudyCard[];
+  addCard: (card: StudyCard) => void;
+  removeCard: (id: string) => void;
+  clearCards: () => void;
 
-  // UI toggles
+  deckOpen: boolean;
+  setDeckOpen: (b: boolean) => void;
+  activeCardId: string | null;
+  setActiveCardId: (id: string | null) => void;
+
   showAllBoxes: boolean;
   focusMode: boolean;
   debugStage: DebugStage | null;
@@ -44,13 +38,11 @@ interface UiState {
   toggleFocusMode: () => void;
   setDebugStage: (s: DebugStage | null) => void;
 
-  // Loading flags
   uploading: boolean;
   uploadError: string | null;
   setUploading: (b: boolean) => void;
   setUploadError: (e: string | null) => void;
 
-  // Reset
   reset: () => void;
 }
 
@@ -63,7 +55,9 @@ const initial = {
   pageSizeByPage: {} as Record<number, { w: number; h: number }>,
   regionsByPage: {} as Record<number, TextRegion[]>,
   ocrCache: {} as Record<string, OcrResult>,
-  history: [] as HistoryEntry[],
+  cards: [] as StudyCard[],
+  deckOpen: false,
+  activeCardId: null as string | null,
   showAllBoxes: false,
   focusMode: false,
   debugStage: null as DebugStage | null,
@@ -85,7 +79,9 @@ export const useStore = create<UiState>((set) => ({
       pageSizeByPage: {},
       regionsByPage: {},
       ocrCache: {},
-      history: [],
+      cards: [],
+      deckOpen: false,
+      activeCardId: null,
     }),
 
   setCurrentPage: (p) => set({ currentPage: p }),
@@ -102,16 +98,25 @@ export const useStore = create<UiState>((set) => ({
   cacheOcr: (key, result) =>
     set((s) => ({ ocrCache: { ...s.ocrCache, [key]: result } })),
 
-  pushHistory: (entry) =>
+  addCard: (card) =>
     set((s) => {
-      // dedupe by page+region
-      const without = s.history.filter(
-        (h) => !(h.page === entry.page && h.region_id === entry.region_id),
-      );
-      return { history: [entry, ...without].slice(0, 50) };
+      const exists = s.cards.some((c) => c.id === card.id);
+      if (exists) return s;
+      return { cards: [card, ...s.cards] };
     }),
 
-  clearHistory: () => set({ history: [] }),
+  removeCard: (id) =>
+    set((s) => ({
+      cards: s.cards.filter((c) => c.id !== id),
+      activeCardId: s.activeCardId === id ? null : s.activeCardId,
+    })),
+
+  clearCards: () => set({ cards: [], activeCardId: null }),
+
+  deckOpen: false,
+  setDeckOpen: (b) => set({ deckOpen: b }),
+  activeCardId: null,
+  setActiveCardId: (id) => set({ activeCardId: id }),
 
   toggleShowAllBoxes: () => set((s) => ({ showAllBoxes: !s.showAllBoxes })),
   toggleFocusMode: () => set((s) => ({ focusMode: !s.focusMode })),

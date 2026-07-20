@@ -40,6 +40,10 @@ import numpy as np
 # the backend (e.g. unit tests on the classical segmentation) does not require
 # torch to be importable.
 try:  # pragma: no cover - import guard
+    import sys
+    _ctd_path = str(Path(__file__).resolve().parent.parent / "comic_text_detector")
+    if _ctd_path not in sys.path:
+        sys.path.insert(0, _ctd_path)
     from comic_text_detector.inference import TextDetector
     from comic_text_detector.utils.textmask import (
         REFINEMASK_INPAINT,

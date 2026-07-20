@@ -9,6 +9,8 @@ import type { TextRegion } from "../types";
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 5;
 const DEBUG_ORDER = ["otsu", "mask", "cc", "watershed"] as const;
+const CLICK_THRESHOLD = 6;
+const CLICK_TIME = 400;
 
 const clamp = (v: number, lo: number, hi: number) =>
   Math.max(lo, Math.min(hi, v));
@@ -24,7 +26,8 @@ export function PageViewer() {
   const setRegions = useStore((s) => s.setRegions);
   const ocrCache = useStore((s) => s.ocrCache);
   const cacheOcr = useStore((s) => s.cacheOcr);
-  const pushHistory = useStore((s) => s.pushHistory);
+  const addCard = useStore((s) => s.addCard);
+  const setActiveCardId = useStore((s) => s.setActiveCardId);
   const showAllBoxes = useStore((s) => s.showAllBoxes);
   const toggleShowAllBoxes = useStore((s) => s.toggleShowAllBoxes);
   const focusMode = useStore((s) => s.focusMode);
@@ -47,10 +50,9 @@ export function PageViewer() {
     startY: number;
     baseX: number;
     baseY: number;
+    time: number;
   } | null>(null);
   const hoverRef = useRef<number | null>(null);
-
-  // ---- data ------------------------------------------------------------
 
   useEffect(() => {
     if (!sessionId) return;
@@ -68,16 +70,12 @@ export function PageViewer() {
     };
   }, [sessionId, currentPage, setRegions, setPageSize]);
 
-  // ---- view reset on page change ---------------------------------------
-
   useEffect(() => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
     hoverRef.current = null;
     setHoverId(null);
   }, [currentPage]);
-
-  // ---- zoom: native wheel (non-passive) + keyboard events --------------
 
   useEffect(() => {
     const el = stageRef.current;
@@ -105,12 +103,6 @@ export function PageViewer() {
     return () => window.removeEventListener("yomi:zoom", handler);
   }, []);
 
-  // ---- hit-testing ------------------------------------------------------
-  //
-  // `img.getBoundingClientRect()` already reflects CSS transforms (pan,
-  // zoom), so mapping client coords into image-natural coords is exact and
-  // immune to drift. This is what keeps the hover rock solid.
-
   const hitTest = useCallback(
     (clientX: number, clientY: number): number | null => {
       const img = imgRef.current;
@@ -132,8 +124,6 @@ export function PageViewer() {
     [pageSize, regions],
   );
 
-  // ---- OCR (once per region, cache-first) -------------------------------
-
   const ensureOcr = useCallback(
     (regionId: number) => {
       const key = `${currentPage}:${regionId}`;
@@ -142,9 +132,6 @@ export function PageViewer() {
       ocr(sessionId, currentPage, regionId)
         .then((res) => {
           cacheOcr(key, res);
-          if (res.text) {
-            pushHistory({ ...res, page: currentPage, ts: Date.now() });
-          }
         })
         .catch(() =>
           cacheOcr(key, {
@@ -152,16 +139,17 @@ export function PageViewer() {
             text: "",
             furigana: "",
             romaji: "",
+            tokens: [],
+            kanji: [],
+            translation: "",
           }),
         )
         .finally(() =>
           setLoadingId((cur) => (cur === regionId ? null : cur)),
         );
     },
-    [sessionId, currentPage, cacheOcr, pushHistory],
+    [sessionId, currentPage, cacheOcr],
   );
-
-  // ---- pointer handlers -------------------------------------------------
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
@@ -171,17 +159,20 @@ export function PageViewer() {
       startY: e.clientY,
       baseX: panRef.current.x,
       baseY: panRef.current.y,
+      time: Date.now(),
     };
-    setDragging(true);
+    setDragging(false);
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
     if (dragRef.current) {
       const d = dragRef.current;
-      setPan({
-        x: d.baseX + (e.clientX - d.startX),
-        y: d.baseY + (e.clientY - d.startY),
-      });
+      const dx = e.clientX - d.startX;
+      const dy = e.clientY - d.startY;
+      if (Math.abs(dx) > CLICK_THRESHOLD || Math.abs(dy) > CLICK_THRESHOLD) {
+        setDragging(true);
+        setPan({ x: d.baseX + dx, y: d.baseY + dy });
+      }
       return;
     }
     const id = hitTest(e.clientX, e.clientY);
@@ -192,18 +183,45 @@ export function PageViewer() {
     }
   };
 
-  const endInteraction = () => {
+  const onPointerUp = (e: React.PointerEvent) => {
+    const d = dragRef.current;
     dragRef.current = null;
     setDragging(false);
+    if (!d) return;
+    const elapsed = Date.now() - d.time;
+    const dx = Math.abs(e.clientX - d.startX);
+    const dy = Math.abs(e.clientY - d.startY);
+    if (dx < CLICK_THRESHOLD && dy < CLICK_THRESHOLD && elapsed < CLICK_TIME) {
+      const id = hitTest(e.clientX, e.clientY);
+      if (id !== null) {
+        const key = `${currentPage}:${id}`;
+        const result = useStore.getState().ocrCache[key];
+        if (result && result.text) {
+          const cardId = `${sessionId}:${currentPage}:${id}`;
+          addCard({
+            id: cardId,
+            page: currentPage,
+            region_id: id,
+            text: result.text,
+            furigana: result.furigana,
+            romaji: result.romaji,
+            translation: result.translation,
+            tokens: result.tokens,
+            kanji: result.kanji,
+            ts: Date.now(),
+          });
+          setActiveCardId(cardId);
+        }
+      }
+    }
   };
 
   const onPointerLeave = () => {
     hoverRef.current = null;
     setHoverId(null);
-    endInteraction();
+    dragRef.current = null;
+    setDragging(false);
   };
-
-  // ---- derived render state ---------------------------------------------
 
   const hoverRegion: TextRegion | null =
     regions.find((r) => r.id === hoverId) ?? null;
@@ -226,13 +244,12 @@ export function PageViewer() {
 
   return (
     <div className="relative flex-1 h-full bg-ink/[0.03] overflow-hidden">
-      {/* Top toolbar */}
       <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-paper/95 backdrop-blur border border-ink/10 shadow-editorial px-1.5 py-1.5">
         <button
           onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
           disabled={currentPage <= 1}
           className="kd-btn-ghost disabled:opacity-30"
-          title="Previous (←)"
+          title="Anterior (←)"
         >
           ←
         </button>
@@ -244,7 +261,7 @@ export function PageViewer() {
           onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage >= totalPages}
           className="kd-btn-ghost disabled:opacity-30"
-          title="Next (→)"
+          title="Próxima (→)"
         >
           →
         </button>
@@ -252,7 +269,7 @@ export function PageViewer() {
         <button
           onClick={() => setZoom((z) => clamp(z / 1.15, MIN_ZOOM, MAX_ZOOM))}
           className="kd-btn-ghost"
-          title="Zoom out (-)"
+          title="Diminuir zoom (-)"
         >
           −
         </button>
@@ -262,7 +279,7 @@ export function PageViewer() {
         <button
           onClick={() => setZoom((z) => clamp(z * 1.15, MIN_ZOOM, MAX_ZOOM))}
           className="kd-btn-ghost"
-          title="Zoom in (+)"
+          title="Aumentar zoom (+)"
         >
           +
         </button>
@@ -272,7 +289,7 @@ export function PageViewer() {
             setPan({ x: 0, y: 0 });
           }}
           className="kd-btn-ghost"
-          title="Reset (0)"
+          title="Resetar (0)"
         >
           0
         </button>
@@ -283,7 +300,7 @@ export function PageViewer() {
             "kd-btn-ghost",
             showAllBoxes ? "!text-ink underline underline-offset-4" : "",
           ].join(" ")}
-          title="Show all regions (b)"
+          title="Mostrar todas as regiões (b)"
         >
           {showAllBoxes ? (
             <Eye className="h-4 w-4" />
@@ -297,7 +314,7 @@ export function PageViewer() {
             "kd-btn-ghost",
             focusMode ? "!text-ink underline underline-offset-4" : "",
           ].join(" ")}
-          title="Focus mode (f)"
+          title="Modo foco (f)"
         >
           <Focus className="h-4 w-4" />
         </button>
@@ -320,22 +337,21 @@ export function PageViewer() {
             "kd-btn-ghost",
             debugStage ? "!text-ink underline underline-offset-4" : "",
           ].join(" ")}
-          title="Debug stages (d)"
+          title="Estágios de debug (d)"
         >
           <ScanSearch className="h-4 w-4" />
         </button>
       </div>
 
-      {/* Stage */}
       <div
         ref={stageRef}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
-        onPointerUp={endInteraction}
+        onPointerUp={onPointerUp}
         onPointerLeave={onPointerLeave}
         className={[
           "absolute inset-0 flex items-center justify-center select-none touch-none",
-          dragging ? "cursor-grabbing" : "cursor-grab",
+          dragging ? "cursor-grabbing" : hoverId !== null ? "cursor-pointer" : "cursor-grab",
         ].join(" ")}
       >
         <div
@@ -348,7 +364,7 @@ export function PageViewer() {
           <img
             ref={imgRef}
             src={pageImageUrl(sessionId, currentPage)}
-            alt={`Page ${currentPage}`}
+            alt={`Página ${currentPage}`}
             draggable={false}
             onLoad={(e) => {
               const el = e.currentTarget;
@@ -412,7 +428,7 @@ export function PageViewer() {
           {debugStage && (
             <img
               src={debugImageUrl(sessionId, currentPage, debugStage)}
-              alt={`Stage: ${debugStage}`}
+              alt={`Estágio: ${debugStage}`}
               draggable={false}
               className="absolute inset-0 w-full h-full object-fill mix-blend-multiply opacity-90 pointer-events-none"
             />

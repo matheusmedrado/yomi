@@ -4,7 +4,9 @@ Endpoints (all under /api/*; the rest serves the React build when present):
   POST /api/load                  upload a CBZ, returns session_id + page count
   GET  /api/page/<sid>/<n>       page image (optional ?w=200 thumbnail)
   POST /api/regions               run the PDI pipeline on page n, return boxes
-  POST /api/ocr                   run manga-ocr + reading on a region
+  POST /api/ocr                   run manga-ocr + reading + analysis on a region
+  GET  /api/region_image/<sid>/<page>/<rid>  bubble crop image (JPEG)
+  POST /api/deck/export           build Anki .apkg from posted cards
   GET  /api/debug/<stage>/<sid>/<n>  intermediate stage image
   GET  /api/health                 liveness probe
 """
@@ -27,19 +29,26 @@ from flask_cors import CORS
 import sys as _sys
 if __package__ in (None, ""):
     _sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    _sys.path.insert(0, str(Path(__file__).resolve().parent))
     from backend import cbz  # type: ignore
-    from backend.language import to_reading  # type: ignore
+    from backend.language import to_reading, analyze  # type: ignore
     from backend.ocr import MangaOcrService  # type: ignore
     from backend.pipeline import debug as pipeline_debug  # type: ignore
     from backend.pipeline import preprocess, segmentation  # type: ignore
     from backend.pipeline.detection import detect_blocks, get_detector  # type: ignore
+    from backend.kanji import lookup as kanji_lookup  # type: ignore
+    from backend.translate import to_portuguese  # type: ignore
+    from backend.deck import build_apkg, CardPayload  # type: ignore
 else:
     from . import cbz
-    from .language import to_reading
+    from .language import to_reading, analyze
     from .ocr import MangaOcrService
     from .pipeline import debug as pipeline_debug
     from .pipeline import preprocess, segmentation
     from .pipeline.detection import detect_blocks, get_detector
+    from .kanji import lookup as kanji_lookup
+    from .translate import to_portuguese
+    from .deck import build_apkg, CardPayload
 
 log = logging.getLogger(__name__)
 
@@ -152,6 +161,13 @@ def _compute_blocks(session_id: str, page: int):
     with _cache_lock:
         _blocks_cache[key] = blocks
     return blocks
+
+
+def _find_block(session_id: str, page: int, region_id: int):
+    blocks = _compute_blocks(session_id, page)
+    if blocks is None:
+        return None
+    return next((b for b in blocks if b.id == region_id), None)
 
 
 # ---------------------------------------------------------------------------
@@ -289,7 +305,10 @@ def register_routes(app: Flask) -> None:
         if block is None:
             return jsonify({"error": "region not found"}), 404
 
-        empty = {"region_id": region_id, "text": "", "furigana": "", "romaji": ""}
+        empty = {
+            "region_id": region_id, "text": "", "furigana": "", "romaji": "",
+            "tokens": [], "kanji": [], "translation": "",
+        }
         if not block.crops:
             return jsonify(empty)
 
@@ -300,17 +319,87 @@ def register_routes(app: Flask) -> None:
 
         if text:
             reading = to_reading(text)
+            analysis = analyze(text)
+            kanji_data = kanji_lookup(analysis["kanji_chars"])
+            translation = to_portuguese(text)
             result = {
                 "region_id": region_id,
                 "text": text,
                 "furigana": reading["furigana"],
                 "romaji": reading["romaji"],
+                "tokens": analysis["tokens"],
+                "kanji": kanji_data,
+                "translation": translation,
             }
         else:
             result = empty
         with _cache_lock:
             _ocr_cache[ocr_key] = result
         return jsonify(result)
+
+    @app.get("/api/region_image/<session_id>/<int:page>/<int:region_id>")
+    def api_region_image(session_id: str, page: int, region_id: int) -> Response:
+        block = _find_block(session_id, page, region_id)
+        if block is None:
+            return jsonify({"error": "region not found"}), 404
+        img = _get_page_image(session_id, page)
+        if img is None:
+            return jsonify({"error": "page not found"}), 404
+        pad = 8
+        y1 = max(0, block.y - pad)
+        y2 = min(img.shape[0], block.y + block.h + pad)
+        x1 = max(0, block.x - pad)
+        x2 = min(img.shape[1], block.x + block.w + pad)
+        crop = img[y1:y2, x1:x2]
+        ok, buf = cv2.imencode(".jpg", crop, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        if not ok:
+            return jsonify({"error": "could not encode crop"}), 500
+        return Response(buf.tobytes(), mimetype="image/jpeg")
+
+    @app.post("/api/deck/export")
+    def api_deck_export() -> Response:
+        body = request.get_json(silent=True) or {}
+        session_id = body.get("session_id")
+        cards_data = body.get("cards", [])
+        if not isinstance(session_id, str) or not isinstance(cards_data, list):
+            return jsonify({"error": "session_id and cards required"}), 400
+
+        payloads: list[CardPayload] = []
+        for c in cards_data:
+            block = _find_block(session_id, c.get("page", 0), c.get("region_id", 0))
+            if block is None:
+                continue
+            img = _get_page_image(session_id, c.get("page", 0))
+            if img is None:
+                continue
+            pad = 8
+            y1 = max(0, block.y - pad)
+            y2 = min(img.shape[0], block.y + block.h + pad)
+            x1 = max(0, block.x - pad)
+            x2 = min(img.shape[1], block.x + block.w + pad)
+            crop = img[y1:y2, x1:x2]
+            ok, buf = cv2.imencode(".jpg", crop, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            if not ok:
+                continue
+            fname = f"card_p{c['page']}_r{c['region_id']}.jpg"
+            payloads.append(CardPayload(
+                page=c["page"],
+                region_id=c["region_id"],
+                text=c.get("text", ""),
+                furigana=c.get("furigana", ""),
+                romaji=c.get("romaji", ""),
+                translation=c.get("translation", ""),
+                kanji_notes=c.get("kanji_notes", ""),
+                image_filename=fname,
+                image_bytes=buf.tobytes(),
+            ))
+
+        apkg_bytes = build_apkg(payloads)
+        return Response(
+            apkg_bytes,
+            mimetype="application/octet-stream",
+            headers={"Content-Disposition": "attachment; filename=yomi_deck.apkg"},
+        )
 
     @app.get("/api/debug/<stage>/<session_id>/<int:page>")
     def api_debug(stage: str, session_id: str, page: int) -> Response:

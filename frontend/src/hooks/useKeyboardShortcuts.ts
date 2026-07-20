@@ -1,16 +1,6 @@
 import { useEffect } from "react";
 import { useStore } from "../store";
 
-/**
- * Global keyboard shortcuts for the reader.
- *   ←  / →   prev/next page
- *   +  / −   zoom in/out
- *   0        reset zoom/pan
- *   b        toggle show-all-boxes
- *   f        toggle focus mode
- *   d        cycle debug stage
- *   ?        (reserved) help
- */
 export function useKeyboardShortcuts() {
   const currentPage = useStore((s) => s.currentPage);
   const totalPages = useStore((s) => s.totalPages);
@@ -19,6 +9,8 @@ export function useKeyboardShortcuts() {
   const toggleFocusMode = useStore((s) => s.toggleFocusMode);
   const debugStage = useStore((s) => s.debugStage);
   const view = useStore((s) => s.view);
+  const activeCardId = useStore((s) => s.activeCardId);
+  const setActiveCardId = useStore((s) => s.setActiveCardId);
 
   useEffect(() => {
     if (view !== "reader") return;
@@ -29,6 +21,14 @@ export function useKeyboardShortcuts() {
       ) {
         return;
       }
+
+      if (e.key === "Escape") {
+        if (activeCardId) {
+          setActiveCardId(null);
+          return;
+        }
+      }
+
       const zoom = (detail: string) =>
         window.dispatchEvent(new CustomEvent("yomi:zoom", { detail }));
 
@@ -81,5 +81,7 @@ export function useKeyboardShortcuts() {
     toggleShowAllBoxes,
     toggleFocusMode,
     debugStage,
+    activeCardId,
+    setActiveCardId,
   ]);
 }

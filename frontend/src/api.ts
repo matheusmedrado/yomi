@@ -1,4 +1,4 @@
-import type { LoadResponse, OcrResult, RegionsResponse } from "./types";
+import type { LoadResponse, OcrResult, RegionsResponse, StudyCard } from "./types";
 
 const API = "/api";
 
@@ -33,6 +33,14 @@ export function pageImageUrl(
   return w ? `${base}?w=${w}` : base;
 }
 
+export function regionImageUrl(
+  sessionId: string,
+  page: number,
+  regionId: number,
+): string {
+  return `${API}/region_image/${sessionId}/${page}/${regionId}`;
+}
+
 export function debugImageUrl(
   sessionId: string,
   page: number,
@@ -61,4 +69,35 @@ export function ocr(
     page,
     region_id: regionId,
   });
+}
+
+export async function exportDeck(
+  sessionId: string,
+  cards: StudyCard[],
+): Promise<Blob> {
+  const res = await fetch(`${API}/deck/export`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      session_id: sessionId,
+      cards: cards.map((c) => ({
+        page: c.page,
+        region_id: c.region_id,
+        text: c.text,
+        furigana: c.furigana,
+        romaji: c.romaji,
+        translation: c.translation,
+        kanji_notes: c.kanji
+          .map(
+            (k) =>
+              `${k.char}: ${k.meanings_pt.join(", ")} | kun: ${k.kun.join(", ")} | on: ${k.on.join(", ")}`,
+          )
+          .join("\n"),
+      })),
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Export failed: ${res.status} ${res.statusText}`);
+  }
+  return res.blob();
 }

@@ -15,5 +15,11 @@ pykakasi>=2.2
 # `manga-ocr` pulls torch and transformers as transitive deps.
 manga-ocr>=0.1.15
 
+# Translation (Google Translate free endpoint)
+requests>=2.31
+
+# Anki deck export
+genanki>=0.13
+
 # Dev / testing
 pytest>=8.0

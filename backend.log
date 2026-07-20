@@ -1,0 +1,204 @@
+/Users/matheusmedrado/PDI/yomi/backend/comic_text_detector/utils/yolov5_utils.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources as pkg
+ * Serving Flask app 'app'
+ * Debug mode: off
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+[33mPress CTRL+C to quit[0m
+2026-07-17 22:17:11.577 | INFO     | manga_ocr.ocr:__init__:16 - Loading OCR model from kha-white/manga-ocr-base
+HTTP Request: HEAD https://huggingface.co/kha-white/manga-ocr-base/resolve/main/processor_config.json "HTTP/1.1 404 Not Found"
+HTTP Request: HEAD https://huggingface.co/kha-white/manga-ocr-base/resolve/main/preprocessor_config.json "HTTP/1.1 307 Temporary Redirect"
+HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/kha-white/manga-ocr-base/aa6573bd10b0d446cbf622e29c3e084914df9741/preprocessor_config.json "HTTP/1.1 200 OK"
+HTTP Request: HEAD https://huggingface.co/kha-white/manga-ocr-base/resolve/main/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/kha-white/manga-ocr-base/aa6573bd10b0d446cbf622e29c3e084914df9741/tokenizer_config.json "HTTP/1.1 200 OK"
+HTTP Request: GET https://huggingface.co/api/models/kha-white/manga-ocr-base/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+HTTP Request: GET https://huggingface.co/api/models/kha-white/manga-ocr-base/tree/main?recursive=true&expand=false "HTTP/1.1 200 OK"
+HTTP Request: HEAD https://huggingface.co/kha-white/manga-ocr-base/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/kha-white/manga-ocr-base/aa6573bd10b0d446cbf622e29c3e084914df9741/config.json "HTTP/1.1 200 OK"
+HTTP Request: HEAD https://huggingface.co/kha-white/manga-ocr-base/resolve/main/model.safetensors "HTTP/1.1 404 Not Found"
+HTTP Request: HEAD https://huggingface.co/kha-white/manga-ocr-base/resolve/main/model.safetensors.index.json "HTTP/1.1 404 Not Found"
+HTTP Request: HEAD https://huggingface.co/kha-white/manga-ocr-base/resolve/main/pytorch_model.bin "HTTP/1.1 302 Found"
+HTTP Request: HEAD https://huggingface.co/kha-white/manga-ocr-base/resolve/main/model.safetensors "HTTP/1.1 404 Not Found"
+Loading weights:   0%|          | 0/264 [00:00<?, ?it/s]Loading weights: 100%|██████████| 264/264 [00:00<00:00, 41378.78it/s]
+HTTP Request: GET https://huggingface.co/api/models/kha-white/manga-ocr-base "HTTP/1.1 200 OK"
+HTTP Request: GET https://huggingface.co/api/models/kha-white/manga-ocr-base/commits/main "HTTP/1.1 200 OK"
+HTTP Request: HEAD https://huggingface.co/kha-white/manga-ocr-base/resolve/main/generation_config.json "HTTP/1.1 404 Not Found"
+HTTP Request: HEAD https://huggingface.co/kha-white/manga-ocr-base/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/kha-white/manga-ocr-base/aa6573bd10b0d446cbf622e29c3e084914df9741/config.json "HTTP/1.1 200 OK"
+HTTP Request: GET https://huggingface.co/api/models/kha-white/manga-ocr-base/discussions?p=0 "HTTP/1.1 200 OK"
+2026-07-17 22:17:13.748 | INFO     | manga_ocr.ocr:__init__:27 - Using MPS
+HTTP Request: GET https://huggingface.co/api/models/kha-white/manga-ocr-base/commits/refs%2Fpr%2F4 "HTTP/1.1 200 OK"
+HTTP Request: HEAD https://huggingface.co/kha-white/manga-ocr-base/resolve/refs%2Fpr%2F4/model.safetensors.index.json "HTTP/1.1 404 Not Found"
+HTTP Request: HEAD https://huggingface.co/kha-white/manga-ocr-base/resolve/refs%2Fpr%2F4/model.safetensors "HTTP/1.1 302 Found"
+2026-07-17 22:17:15.038 | INFO     | manga_ocr.ocr:__init__:37 - OCR ready
+manga-ocr loaded successfully.
+127.0.0.1 - - [17/Jul/2026 22:17:15] "GET /api/health HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:20:23] "GET /api/page/RCq6AWiXXq8/2 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:20:32] "POST /api/load HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:20:32] "GET /api/page/AdKzdY7asSc/6?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:20:32] "GET /api/page/AdKzdY7asSc/3?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:20:32] "GET /api/page/AdKzdY7asSc/5?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:20:32] "GET /api/page/AdKzdY7asSc/4?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:20:33] "GET /api/page/AdKzdY7asSc/1?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:20:33] "GET /api/page/AdKzdY7asSc/7?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:20:33] "GET /api/page/AdKzdY7asSc/9?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:20:33] "GET /api/page/AdKzdY7asSc/8?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:20:33] "GET /api/page/AdKzdY7asSc/11?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:20:33] "GET /api/page/AdKzdY7asSc/12?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:20:33] "GET /api/page/AdKzdY7asSc/14?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:20:33] "GET /api/page/AdKzdY7asSc/13?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:20:33] "GET /api/page/AdKzdY7asSc/1 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:20:33] "GET /api/page/AdKzdY7asSc/2?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:20:33] "GET /api/page/AdKzdY7asSc/10?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:20:33] "GET /api/page/AdKzdY7asSc/15?w=160 HTTP/1.1" 200 -
+regions: page=AdKzdY7asSc/1 -> 13 blocks in 1202ms
+regions: page=AdKzdY7asSc/1 -> 13 blocks in 1202ms
+127.0.0.1 - - [17/Jul/2026 22:20:34] "POST /api/regions HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:20:34] "POST /api/regions HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:20:36] "GET /api/page/AdKzdY7asSc/3 HTTP/1.1" 200 -
+regions: page=AdKzdY7asSc/3 -> 19 blocks in 454ms
+127.0.0.1 - - [17/Jul/2026 22:20:37] "POST /api/regions HTTP/1.1" 200 -
+ocr: 288ms crop=88x135 text='ん？'
+ocr: 68ms crop=88x201 text='あれ？'
+kanji: downloading KANJIDIC2 from http://www.edrdg.org/kanjidic/kanjidic2.xml.gz ...
+kanji: saved 1488562 bytes to /Users/matheusmedrado/.cache/yomi/kanjidic2.xml.gz
+kanji: parsing /Users/matheusmedrado/.cache/yomi/kanjidic2.xml.gz ...
+kanji: loaded 13108 entries
+127.0.0.1 - - [17/Jul/2026 22:20:41] "POST /api/ocr HTTP/1.1" 200 -
+ocr: 178ms crop=88x128 text='もし'
+ocr: 93ms crop=88x193 text='もし！！'
+127.0.0.1 - - [17/Jul/2026 22:20:47] "POST /api/ocr HTTP/1.1" 200 -
+ocr: 173ms crop=88x250 text='もしもし'
+ocr: 109ms crop=88x295 text='おうとう'
+ocr: 78ms crop=88x212 text='せよ！！'
+127.0.0.1 - - [17/Jul/2026 22:20:50] "POST /api/ocr HTTP/1.1" 200 -
+ocr: 156ms crop=88x138 text='「ザガザ！！'
+ocr: 98ms crop=88x189 text='．．．！！'
+127.0.0.1 - - [17/Jul/2026 22:20:57] "POST /api/ocr HTTP/1.1" 200 -
+ocr: 162ms crop=88x231 text='もしもし'
+ocr: 97ms crop=88x128 text='．．．？'
+127.0.0.1 - - [17/Jul/2026 22:21:09] "POST /api/ocr HTTP/1.1" 200 -
+ocr: 113ms crop=88x137 text='え？'
+127.0.0.1 - - [17/Jul/2026 22:21:19] "POST /api/ocr HTTP/1.1" 200 -
+ocr: 165ms crop=88x119 text='お前'
+ocr: 86ms crop=88x305 text='だれだ？'
+127.0.0.1 - - [17/Jul/2026 22:21:34] "POST /api/ocr HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:21:44] "GET /api/region_image/AdKzdY7asSc/3/6 HTTP/1.1" 200 -
+ocr: 167ms crop=88x179 text='ジョイ'
+ocr: 104ms crop=88x238 text='ボーイ！！'
+127.0.0.1 - - [17/Jul/2026 22:22:14] "POST /api/ocr HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:22:20] "GET /api/page/AdKzdY7asSc/15 HTTP/1.1" 200 -
+regions: page=AdKzdY7asSc/15 -> 18 blocks in 590ms
+127.0.0.1 - - [17/Jul/2026 22:22:20] "POST /api/regions HTTP/1.1" 200 -
+ocr: 150ms crop=88x262 text='こんなに'
+ocr: 103ms crop=88x226 text='弱くない'
+ocr: 99ms crop=88x121 text='．．．！！'
+ocr: 97ms crop=88x262 text='こんなに'
+ocr: 93ms crop=88x226 text='弱くない'
+ocr: 81ms crop=88x121 text='．．．！！'
+127.0.0.1 - - [17/Jul/2026 22:22:23] "POST /api/ocr HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:22:24] "POST /api/ocr HTTP/1.1" 200 -
+ocr: 160ms crop=88x165 text='ジョイ'
+ocr: 92ms crop=88x169 text='ボーイ'
+ocr: 79ms crop=88x194 text='なら．．．'
+127.0.0.1 - - [17/Jul/2026 22:22:29] "POST /api/ocr HTTP/1.1" 200 -
+ocr: 163ms crop=94x88 text='いけっ！！！'
+127.0.0.1 - - [17/Jul/2026 22:22:39] "POST /api/ocr HTTP/1.1" 200 -
+ocr: 159ms crop=88x193 text='うわあ'
+ocr: 102ms crop=88x180 text='ああ！！！'
+127.0.0.1 - - [17/Jul/2026 22:22:41] "POST /api/ocr HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:22:51] "[33mGET /api/page/null/1 HTTP/1.1[0m" 404 -
+127.0.0.1 - - [17/Jul/2026 22:33:44] "POST /api/load HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:33:44] "GET /api/page/Apa06xP2bLY/5?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:33:44] "GET /api/page/Apa06xP2bLY/4?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:33:44] "GET /api/page/Apa06xP2bLY/6?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:33:44] "GET /api/page/Apa06xP2bLY/3?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:33:44] "GET /api/page/Apa06xP2bLY/1?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:33:44] "GET /api/page/Apa06xP2bLY/7?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:33:44] "GET /api/page/Apa06xP2bLY/9?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:33:44] "GET /api/page/Apa06xP2bLY/8?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:33:44] "GET /api/page/Apa06xP2bLY/11?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:33:44] "GET /api/page/Apa06xP2bLY/12?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:33:44] "GET /api/page/Apa06xP2bLY/13?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:33:44] "GET /api/page/Apa06xP2bLY/1 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:33:44] "GET /api/page/Apa06xP2bLY/2?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:33:44] "GET /api/page/Apa06xP2bLY/14?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:33:44] "GET /api/page/Apa06xP2bLY/10?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:33:44] "GET /api/page/Apa06xP2bLY/15?w=160 HTTP/1.1" 200 -
+regions: page=Apa06xP2bLY/1 -> 13 blocks in 961ms
+127.0.0.1 - - [17/Jul/2026 22:33:45] "POST /api/regions HTTP/1.1" 200 -
+regions: page=Apa06xP2bLY/1 -> 13 blocks in 979ms
+127.0.0.1 - - [17/Jul/2026 22:33:45] "POST /api/regions HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:33:47] "GET /api/page/Apa06xP2bLY/3 HTTP/1.1" 200 -
+regions: page=Apa06xP2bLY/3 -> 19 blocks in 461ms
+127.0.0.1 - - [17/Jul/2026 22:33:48] "POST /api/regions HTTP/1.1" 200 -
+ocr: 393ms crop=88x128 text='もし'
+ocr: 81ms crop=88x193 text='もし！！'
+127.0.0.1 - - [17/Jul/2026 22:33:53] "POST /api/ocr HTTP/1.1" 200 -
+ocr: 179ms crop=88x250 text='もしもし'
+ocr: 133ms crop=88x295 text='おうとう'
+ocr: 80ms crop=88x212 text='せよ！！'
+127.0.0.1 - - [17/Jul/2026 22:33:58] "POST /api/ocr HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:33:59] "GET /api/region_image/Apa06xP2bLY/3/1 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:34:35] "POST /api/load HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:34:35] "GET /api/page/Ww2b8M-Zc8Q/5?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:34:35] "GET /api/page/Ww2b8M-Zc8Q/4?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:34:35] "GET /api/page/Ww2b8M-Zc8Q/3?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:34:35] "GET /api/page/Ww2b8M-Zc8Q/6?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:34:35] "GET /api/page/Ww2b8M-Zc8Q/1?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:34:35] "GET /api/page/Ww2b8M-Zc8Q/7?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:34:35] "GET /api/page/Ww2b8M-Zc8Q/8?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:34:35] "GET /api/page/Ww2b8M-Zc8Q/9?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:34:35] "GET /api/page/Ww2b8M-Zc8Q/11?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:34:35] "GET /api/page/Ww2b8M-Zc8Q/12?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:34:35] "GET /api/page/Ww2b8M-Zc8Q/1 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:34:35] "GET /api/page/Ww2b8M-Zc8Q/14?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:34:35] "GET /api/page/Ww2b8M-Zc8Q/13?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:34:35] "GET /api/page/Ww2b8M-Zc8Q/2?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:34:35] "GET /api/page/Ww2b8M-Zc8Q/10?w=160 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:34:35] "GET /api/page/Ww2b8M-Zc8Q/15?w=160 HTTP/1.1" 200 -
+regions: page=Ww2b8M-Zc8Q/1 -> 13 blocks in 947ms
+127.0.0.1 - - [17/Jul/2026 22:34:36] "POST /api/regions HTTP/1.1" 200 -
+regions: page=Ww2b8M-Zc8Q/1 -> 13 blocks in 947ms
+127.0.0.1 - - [17/Jul/2026 22:34:36] "POST /api/regions HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:34:38] "GET /api/page/Ww2b8M-Zc8Q/3 HTTP/1.1" 200 -
+regions: page=Ww2b8M-Zc8Q/3 -> 19 blocks in 450ms
+127.0.0.1 - - [17/Jul/2026 22:34:39] "POST /api/regions HTTP/1.1" 200 -
+ocr: 379ms crop=88x138 text='「ザガザ！！'
+ocr: 90ms crop=88x189 text='．．．！！'
+127.0.0.1 - - [17/Jul/2026 22:34:40] "POST /api/ocr HTTP/1.1" 200 -
+ocr: 92ms crop=88x231 text='もしもし'
+ocr: 79ms crop=88x128 text='．．．？'
+127.0.0.1 - - [17/Jul/2026 22:34:41] "POST /api/ocr HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:34:43] "GET /api/region_image/Ww2b8M-Zc8Q/3/3 HTTP/1.1" 200 -
+ocr: 165ms crop=88x119 text='お前'
+ocr: 88ms crop=88x305 text='だれだ？'
+127.0.0.1 - - [17/Jul/2026 22:34:50] "POST /api/ocr HTTP/1.1" 200 -
+ocr: 151ms crop=88x167 text='ムーは'
+ocr: 80ms crop=88x97 text='．．．'
+127.0.0.1 - - [17/Jul/2026 22:34:52] "POST /api/ocr HTTP/1.1" 200 -
+ocr: 175ms crop=88x81 text='イム．．．！！'
+127.0.0.1 - - [17/Jul/2026 22:34:54] "POST /api/ocr HTTP/1.1" 200 -
+ocr: 159ms crop=88x250 text='もしもし'
+ocr: 104ms crop=88x295 text='おうとう'
+ocr: 78ms crop=88x212 text='せよ！！'
+127.0.0.1 - - [17/Jul/2026 22:35:03] "POST /api/ocr HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:35:10] "GET /api/debug/otsu/Ww2b8M-Zc8Q/3 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:35:13] "GET /api/debug/mask/Ww2b8M-Zc8Q/3 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:35:15] "GET /api/debug/cc/Ww2b8M-Zc8Q/3 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:35:20] "GET /api/debug/watershed/Ww2b8M-Zc8Q/3 HTTP/1.1" 200 -
+ocr: 153ms crop=88x177 text='ヌシア'
+ocr: 93ms crop=88x131 text='こそ'
+ocr: 67ms crop=88x183 text='だれ？'
+ocr: 147ms crop=88x135 text='そう'
+ocr: 112ms crop=88x233 text='とも．．．'
+127.0.0.1 - - [17/Jul/2026 22:35:25] "POST /api/ocr HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jul/2026 22:35:26] "POST /api/ocr HTTP/1.1" 200 -
+ocr: 177ms crop=88x131 text='あ．．．'
+ocr: 89ms crop=88x180 text='おれ．．'
+127.0.0.1 - - [17/Jul/2026 22:35:27] "POST /api/ocr HTTP/1.1" 200 -
+ocr: 175ms crop=88x179 text='ジョイ'
+ocr: 106ms crop=88x238 text='ボーイ！！'
+127.0.0.1 - - [17/Jul/2026 22:35:32] "POST /api/ocr HTTP/1.1" 200 -
