@@ -16,6 +16,12 @@ learning.
   PDI genuinely cannot do on real artwork — uses a learned detector, as detailed
   in §3.
 
+## 🎬 Demo
+
+[![Yomi Demo](https://img.youtube.com/vi/OMmOtloOp4I/maxresdefault.jpg)](https://youtu.be/OMmOtloOp4I)
+
+*Assista a demonstração completa no YouTube*
+
 ---
 
 ## 1. About
