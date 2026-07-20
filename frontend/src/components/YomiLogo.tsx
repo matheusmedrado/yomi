@@ -20,7 +20,7 @@ export function YomiLogo({ size = 56, className = "" }: LogoProps) {
       style={{ width: size, height: size }}
     >
       <svg viewBox="0 0 64 64" width={size} height={size} aria-label="Yomi">
-        <rect x="0" y="0" width="64" height="64" fill="#0a0a0a" />
+        <rect x="0" y="0" width="64" height="64" fill="var(--ink, #0a0a0a)" />
         <text
           x="32"
           y="48"
@@ -28,7 +28,7 @@ export function YomiLogo({ size = 56, className = "" }: LogoProps) {
           fontWeight={700}
           fontSize={44}
           textAnchor="middle"
-          fill="#fafaf7"
+          fill="var(--paper, #fafaf7)"
         >
           読
         </text>

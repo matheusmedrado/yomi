@@ -38,6 +38,7 @@ export function PageViewer() {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [hoverId, setHoverId] = useState<number | null>(null);
+  const [keyboardFocusId, setKeyboardFocusId] = useState<number | null>(null);
   const [loadingId, setLoadingId] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -64,7 +65,9 @@ export function PageViewer() {
         setRegions(currentPage, res.regions);
         setPageSize(currentPage, { w: res.width, h: res.height });
       })
-      .catch((e) => console.error("getRegions failed", e));
+      .catch(() => {
+        // Regions failed to load - will retry on next page change
+      });
     return () => {
       cancelled = true;
     };
@@ -75,6 +78,7 @@ export function PageViewer() {
     setPan({ x: 0, y: 0 });
     hoverRef.current = null;
     setHoverId(null);
+    setKeyboardFocusId(null);
   }, [currentPage]);
 
   useEffect(() => {
@@ -151,6 +155,84 @@ export function PageViewer() {
     [sessionId, currentPage, cacheOcr],
   );
 
+  const navigateRegion = useCallback(
+    (direction: "next" | "prev") => {
+      if (regions.length === 0) return;
+
+      const currentIndex = keyboardFocusId
+        ? regions.findIndex((r) => r.id === keyboardFocusId)
+        : -1;
+
+      let nextIndex: number;
+      if (direction === "next") {
+        nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % regions.length;
+      } else {
+        nextIndex =
+          currentIndex === -1
+            ? regions.length - 1
+            : (currentIndex - 1 + regions.length) % regions.length;
+      }
+
+      const nextRegion = regions[nextIndex];
+      setKeyboardFocusId(nextRegion.id);
+      ensureOcr(nextRegion.id);
+    },
+    [regions, keyboardFocusId, ensureOcr],
+  );
+
+  const clearKeyboardFocus = useCallback(() => {
+    setKeyboardFocusId(null);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      if (e.key === "Tab") {
+        e.preventDefault();
+        navigateRegion(e.shiftKey ? "prev" : "next");
+      } else if (e.key === "Escape") {
+        clearKeyboardFocus();
+      } else if (e.key === "Enter" && keyboardFocusId !== null) {
+        e.preventDefault();
+        const key = `${currentPage}:${keyboardFocusId}`;
+        const result = useStore.getState().ocrCache[key];
+        if (result && result.text) {
+          const cardId = `${sessionId}:${currentPage}:${keyboardFocusId}`;
+          addCard({
+            id: cardId,
+            page: currentPage,
+            region_id: keyboardFocusId,
+            text: result.text,
+            furigana: result.furigana,
+            romaji: result.romaji,
+            translation: result.translation,
+            tokens: result.tokens,
+            kanji: result.kanji,
+            ts: Date.now(),
+          });
+          setActiveCardId(cardId);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    navigateRegion,
+    clearKeyboardFocus,
+    keyboardFocusId,
+    currentPage,
+    sessionId,
+    addCard,
+    setActiveCardId,
+  ]);
+
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
     (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
@@ -223,24 +305,26 @@ export function PageViewer() {
     setDragging(false);
   };
 
-  const hoverRegion: TextRegion | null =
-    regions.find((r) => r.id === hoverId) ?? null;
+  // Determine active region (hover takes priority over keyboard focus)
+  const activeId = hoverId ?? keyboardFocusId;
+  const activeRegion: TextRegion | null =
+    regions.find((r) => r.id === activeId) ?? null;
 
   let anchor: { x: number; y: number } | null = null;
-  if (hoverRegion && imgRef.current && pageSize) {
+  if (activeRegion && imgRef.current && pageSize) {
     const rect = imgRef.current.getBoundingClientRect();
     anchor = {
       x:
         rect.left +
-        ((hoverRegion.x + hoverRegion.w) / pageSize.w) * rect.width,
-      y: rect.top + (hoverRegion.y / pageSize.h) * rect.height,
+        ((activeRegion.x + activeRegion.w) / pageSize.w) * rect.width,
+      y: rect.top + (activeRegion.y / pageSize.h) * rect.height,
     };
   }
 
-  const cacheKey = hoverId !== null ? `${currentPage}:${hoverId}` : null;
+  const cacheKey = activeId !== null ? `${currentPage}:${activeId}` : null;
   const currentResult = cacheKey ? ocrCache[cacheKey] ?? null : null;
   const overlayLoading =
-    hoverId !== null && loadingId === hoverId && !currentResult;
+    activeId !== null && loadingId === activeId && !currentResult;
 
   return (
     <div className="relative flex-1 h-full bg-ink/[0.03] overflow-hidden">
@@ -248,7 +332,7 @@ export function PageViewer() {
         <button
           onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
           disabled={currentPage <= 1}
-          className="kd-btn-ghost disabled:opacity-30"
+          className="kd-btn-ghost disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-vermilion/50 rounded"
           title="Anterior (←)"
         >
           ←
@@ -260,7 +344,7 @@ export function PageViewer() {
         <button
           onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage >= totalPages}
-          className="kd-btn-ghost disabled:opacity-30"
+          className="kd-btn-ghost disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-vermilion/50 rounded"
           title="Próxima (→)"
         >
           →
@@ -268,7 +352,7 @@ export function PageViewer() {
         <span className="w-px h-5 bg-ink/15 mx-1" />
         <button
           onClick={() => setZoom((z) => clamp(z / 1.15, MIN_ZOOM, MAX_ZOOM))}
-          className="kd-btn-ghost"
+          className="kd-btn-ghost focus:outline-none focus:ring-2 focus:ring-vermilion/50 rounded"
           title="Diminuir zoom (-)"
         >
           −
@@ -278,7 +362,7 @@ export function PageViewer() {
         </span>
         <button
           onClick={() => setZoom((z) => clamp(z * 1.15, MIN_ZOOM, MAX_ZOOM))}
-          className="kd-btn-ghost"
+          className="kd-btn-ghost focus:outline-none focus:ring-2 focus:ring-vermilion/50 rounded"
           title="Aumentar zoom (+)"
         >
           +
@@ -288,7 +372,7 @@ export function PageViewer() {
             setZoom(1);
             setPan({ x: 0, y: 0 });
           }}
-          className="kd-btn-ghost"
+          className="kd-btn-ghost focus:outline-none focus:ring-2 focus:ring-vermilion/50 rounded"
           title="Resetar (0)"
         >
           0
@@ -297,7 +381,7 @@ export function PageViewer() {
         <button
           onClick={toggleShowAllBoxes}
           className={[
-            "kd-btn-ghost",
+            "kd-btn-ghost focus:outline-none focus:ring-2 focus:ring-vermilion/50 rounded",
             showAllBoxes ? "!text-ink underline underline-offset-4" : "",
           ].join(" ")}
           title="Mostrar todas as regiões (b)"
@@ -311,7 +395,7 @@ export function PageViewer() {
         <button
           onClick={toggleFocusMode}
           className={[
-            "kd-btn-ghost",
+            "kd-btn-ghost focus:outline-none focus:ring-2 focus:ring-vermilion/50 rounded",
             focusMode ? "!text-ink underline underline-offset-4" : "",
           ].join(" ")}
           title="Modo foco (f)"
@@ -334,7 +418,7 @@ export function PageViewer() {
             }
           }}
           className={[
-            "kd-btn-ghost",
+            "kd-btn-ghost focus:outline-none focus:ring-2 focus:ring-vermilion/50 rounded",
             debugStage ? "!text-ink underline underline-offset-4" : "",
           ].join(" ")}
           title="Estágios de debug (d)"
@@ -390,7 +474,9 @@ export function PageViewer() {
             >
               {regions.map((r) => {
                 const isHovered = hoverId === r.id;
-                const visible = isHovered || showAllBoxes;
+                const isKeyboardFocused = keyboardFocusId === r.id;
+                const isActive = isHovered || isKeyboardFocused;
+                const visible = isActive || showAllBoxes;
                 return (
                   <rect
                     key={r.id}
@@ -399,17 +485,25 @@ export function PageViewer() {
                     width={r.w}
                     height={r.h}
                     fill={
-                      isHovered ? "rgba(200,16,46,0.10)" : "rgba(200,16,46,0)"
+                      isActive ? "rgba(200,16,46,0.10)" : "rgba(200,16,46,0)"
                     }
                     stroke={
-                      isHovered
-                        ? "#c8102e"
-                        : showAllBoxes
-                          ? "rgba(10,10,10,0.45)"
-                          : "rgba(200,16,46,0)"
+                      isKeyboardFocused
+                        ? "#4a90e2"
+                        : isHovered
+                          ? "var(--vermilion, #c8102e)"
+                          : showAllBoxes
+                            ? "rgba(10,10,10,0.45)"
+                            : "rgba(200,16,46,0)"
                     }
-                    strokeWidth={isHovered ? 2.5 : 1.5}
-                    strokeDasharray={showAllBoxes && !isHovered ? "7 5" : undefined}
+                    strokeWidth={isActive ? 2.5 : 1.5}
+                    strokeDasharray={
+                      isKeyboardFocused
+                        ? "4 2"
+                        : showAllBoxes && !isActive
+                          ? "7 5"
+                          : undefined
+                    }
                     vectorEffect="non-scaling-stroke"
                     style={{
                       opacity: visible ? 1 : 0,
@@ -421,8 +515,8 @@ export function PageViewer() {
             </svg>
           )}
 
-          {focusMode && hoverRegion && pageSize && (
-            <FocusMask region={hoverRegion} pageSize={pageSize} />
+          {focusMode && activeRegion && pageSize && (
+            <FocusMask region={activeRegion} pageSize={pageSize} />
           )}
 
           {debugStage && (

@@ -29,6 +29,20 @@ local/
 .DS_Store
 .idea/
 .vscode/
+.cursor/
+.impeccable/
+
+# ----- Logs -----
+*.log
+backend.log
+frontend.log
+
+# ----- Backend sessions (temporary data) -----
+backend/sessions/
+backend/one_piece_1188.py
+
+# ----- Scripts (local utilities) -----
+scripts/
 
 # ----- Frontend (Vite + React) -----
 frontend/node_modules/

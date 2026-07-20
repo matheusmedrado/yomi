@@ -52,14 +52,14 @@ export function FlashcardModal() {
           <div className="flex items-center gap-1">
             <button
               onClick={handleDelete}
-              className="kd-btn-ghost text-vermilion"
+              className="kd-btn-ghost text-vermilion focus:outline-none focus:ring-2 focus:ring-vermilion/50 rounded"
               title="Excluir card"
             >
               <Trash2 className="h-4 w-4" />
             </button>
             <button
               onClick={handleClose}
-              className="kd-btn-ghost"
+              className="kd-btn-ghost focus:outline-none focus:ring-2 focus:ring-vermilion/50 rounded"
               title="Fechar (Esc)"
             >
               <X className="h-4 w-4" />
@@ -74,7 +74,7 @@ export function FlashcardModal() {
         >
           <motion.div
             animate={{ rotateY: flipped ? 180 : 0 }}
-            transition={{ duration: 0.5, ease: "easeInOut" }}
+            transition={{ duration: 0.5, ease: [0.2, 0.7, 0.1, 1] }}
             className="relative w-full h-full"
             style={{ transformStyle: "preserve-3d", minHeight: "420px" }}
           >
@@ -86,7 +86,7 @@ export function FlashcardModal() {
               <div className="flex-1 flex items-center justify-center p-6 bg-paper-warm">
                 <img
                   src={regionImageUrl(sessionId, card.page, card.region_id)}
-                  alt=""
+                  alt={`Região de texto da página ${card.page}`}
                   className="max-h-[200px] max-w-full object-contain shadow-editorial"
                 />
               </div>
@@ -95,7 +95,7 @@ export function FlashcardModal() {
                   {card.text}
                 </p>
                 <p className="text-center text-ink-muted text-sm mt-3">
-                  Toque para virar
+                  Clique para virar
                 </p>
               </div>
             </div>
@@ -140,7 +140,7 @@ export function FlashcardModal() {
                           key={k.char}
                           className="flex gap-3 items-start text-sm"
                         >
-                          <span className="font-serif text-2xl text-[#c8102e] leading-none mt-0.5">
+                          <span className="font-serif text-2xl text-vermilion leading-none mt-0.5">
                             {k.char}
                           </span>
                           <div className="flex-1 min-w-0">
@@ -201,13 +201,13 @@ export function FlashcardModal() {
           <button
             onClick={() => prev && setActiveCardId(prev.id)}
             disabled={!prev}
-            className="kd-btn-ghost disabled:opacity-30"
+            className="kd-btn-ghost disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-vermilion/50 rounded"
           >
             ← Anterior
           </button>
           <button
             onClick={handleFlip}
-            className="kd-btn-ghost"
+            className="kd-btn-ghost focus:outline-none focus:ring-2 focus:ring-vermilion/50 rounded"
             title="Virar (Espaço)"
           >
             <RotateCcw className="h-4 w-4" />
@@ -215,7 +215,7 @@ export function FlashcardModal() {
           <button
             onClick={() => next && setActiveCardId(next.id)}
             disabled={!next}
-            className="kd-btn-ghost disabled:opacity-30"
+            className="kd-btn-ghost disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-vermilion/50 rounded"
           >
             Próximo →
           </button>

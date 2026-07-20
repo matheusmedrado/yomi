@@ -13,7 +13,7 @@ const OVERLAY_EST_H = 260;
 const GAP = 8;
 
 const SCRIPT_COLORS: Record<ScriptType, string> = {
-  kanji: "text-[#ff8093]",
+  kanji: "text-vermilion",
   katakana: "text-[#8ab4ff]",
   hiragana: "text-paper",
   other: "text-paper/70",
@@ -41,6 +41,8 @@ export function TextOverlay({ anchor, result, loading }: TextOverlayProps) {
       transition={{ duration: 0.15, ease: "easeOut" }}
       style={{ left, top, width: OVERLAY_W }}
       className="fixed z-40 pointer-events-none"
+      role="tooltip"
+      aria-label={loading ? "Reconhecendo texto" : result?.text ? "Texto reconhecido" : "Nenhum texto reconhecido"}
     >
       <div className="bg-ink text-paper shadow-editorial-lg">
         {loading ? (
@@ -116,7 +118,7 @@ export function TextOverlay({ anchor, result, loading }: TextOverlayProps) {
                     className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-paper/10 text-[11px] text-paper/80"
                     title={k.meanings_pt.join(", ") || k.meanings_en.join(", ")}
                   >
-                    <span className="text-[#ff8093] font-serif">{k.char}</span>
+                    <span className="text-vermilion font-serif">{k.char}</span>
                     <span className="text-paper/50 truncate max-w-[80px]">
                       {k.meanings_pt[0] || k.meanings_en[0] || ""}
                     </span>

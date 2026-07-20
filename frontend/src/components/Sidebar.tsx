@@ -30,7 +30,7 @@ export function Sidebar() {
   return (
     <aside className="w-[140px] shrink-0 h-full bg-paper-warm border-r border-ink/10 flex flex-col">
       <div className="px-3 py-3 border-b border-ink/10 flex items-center justify-between">
-        <span className="kd-kicker">Pages</span>
+        <span className="kd-kicker">Páginas</span>
         <span className="font-mono text-[10px] text-ink-muted">
           {currentPage}/{totalPages}
         </span>
@@ -50,12 +50,13 @@ export function Sidebar() {
                 active
                   ? "border-ink ring-1 ring-ink/20"
                   : "border-ink/10 hover:border-ink/40",
+                "focus:outline-none focus:ring-2 focus:ring-vermilion/50 rounded",
               ].join(" ")}
             >
               <div className="relative aspect-[2/3] bg-paper overflow-hidden">
                 <img
                   src={pageImageUrl(sessionId, n, 160)}
-                  alt={`Page ${n}`}
+                  alt={`Página ${n}`}
                   loading="lazy"
                   className="absolute inset-0 w-full h-full object-cover"
                 />
