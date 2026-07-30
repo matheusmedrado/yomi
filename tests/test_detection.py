@@ -47,3 +47,39 @@ def test_block_crops_are_nonempty():
         for crop in b.crops:
             assert crop is not None and crop.size > 0
             assert crop.ndim == 3 and crop.shape[2] == 3
+
+
+def test_baseline_mode_keeps_raw_crops_without_conditioning():
+    class FakeLineBlock:
+        xyxy = (0, 0, 80, 70)
+        vertical = False
+        font_size = 12
+
+        def lines_array(self):
+            return [object()]
+
+        def get_transformed_region(self, image, _line_index, _height):
+            return image[:64, :80]
+
+    class FakeDetector:
+        available = True
+
+        def detect(self, image):
+            return np.zeros(image.shape[:2], np.uint8), np.zeros(image.shape[:2], np.uint8), [FakeLineBlock()]
+
+    image = np.full((100, 100, 3), 255, dtype=np.uint8)
+    blocks = detect_blocks(image, detector=FakeDetector(), mode="baseline")
+    assert blocks and blocks[0].crops and not blocks[0].conditioning
+
+
+def test_pdi_only_mode_does_not_call_detector(monkeypatch):
+    image = np.full((120, 240, 3), 255, dtype=np.uint8)
+    cv2.putText(image, "PDI", (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.4,
+                (0, 0, 0), 2, cv2.LINE_AA)
+
+    def fail(*_args, **_kwargs):
+        raise AssertionError("detector should not be called in pdi_only mode")
+
+    monkeypatch.setattr("pipeline.detection.get_detector", fail)
+    blocks = detect_blocks(image, mode="pdi_only")
+    assert isinstance(blocks, list)

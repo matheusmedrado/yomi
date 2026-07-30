@@ -1,15 +1,4 @@
-"""Pre-processing stage (Labs 00, 03, 04, 09).
-
-Implements:
-  - Lab 00: numpy/OpenCV/matplotlib image I/O and array handling.
-  - Lab 01: sampling / quantization via resize for DPI control.
-  - Lab 03: histogram equalization (CLAHE) for contrast on faded pages.
-  - Lab 04: low-pass filtering (Gaussian, median, bilateral) for noise.
-  - Lab 09: color handling — produce a binary text mask from color pages so
-    that painted backgrounds and dark frames do not bleed into the ink mask.
-
-Every function is pure and unit-tested on its own.
-"""
+"""Sampling, contrast, low-pass filtering and color masking."""
 from __future__ import annotations
 
 import cv2

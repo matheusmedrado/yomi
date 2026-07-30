@@ -8,7 +8,7 @@ import type { TextRegion } from "../types";
 
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 5;
-const DEBUG_ORDER = ["otsu", "mask", "cc", "watershed"] as const;
+const DEBUG_ORDER = ["otsu", "mask", "cc", "watershed", "conditioning_overlay"] as const;
 const CLICK_THRESHOLD = 6;
 const CLICK_TIME = 400;
 

@@ -1,12 +1,4 @@
-"""Language layer: rule-based kana/kanji -> furigana/romaji conversion + analysis.
-
-`pykakasi` is a port of the classical `kakasi` system — a rules-based
-converter, not a language model. That fits the project's "no AI" policy
-nicely: it is a deterministic lookup table, not deep learning.
-
-The output is a small dict so the frontend can render both readings in the
-hover overlay without further processing.
-"""
+"""Japanese reading and analysis helpers."""
 from __future__ import annotations
 
 from typing import TypedDict

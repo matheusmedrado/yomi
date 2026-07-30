@@ -49,7 +49,13 @@ export interface RegionsResponse {
   regions: TextRegion[];
 }
 
-export type DebugStage = "gray" | "mask" | "otsu" | "cc" | "watershed";
+export type DebugStage =
+  | "gray"
+  | "mask"
+  | "otsu"
+  | "cc"
+  | "watershed"
+  | "conditioning_overlay";
 
 export type AppView = "upload" | "reader";
 

@@ -139,6 +139,10 @@ def _compute_regions(session_id: str, page: int) -> dict | None:
     }
     with _cache_lock:
         _regions_cache[key] = payload
+        # Keep the exact conditioned crops that produced these stable region
+        # ids; otherwise a later OCR/debug call would invoke the detector a
+        # second time and could observe a different ordering.
+        _blocks_cache[key] = blocks
     log.info("regions: page=%s/%s -> %d blocks in %.0fms",
              session_id, page, len(blocks), dt)
     return payload
@@ -408,13 +412,21 @@ def register_routes(app: Flask) -> None:
             return jsonify({"error": "session not found"}), 404
         if page < 1 or page > len(files):
             return jsonify({"error": "page out of range"}), 404
-        if stage not in pipeline_debug.STAGES:
+        available = list(pipeline_debug.STAGES) + sorted(pipeline_debug.CONDITIONING_STAGES)
+        if stage not in pipeline_debug.STAGES and stage not in pipeline_debug.CONDITIONING_STAGES:
             return jsonify({
                 "error": f"unknown stage {stage!r}",
-                "available": list(pipeline_debug.STAGES),
+                "available": available,
             }), 400
         try:
-            stage_img = pipeline_debug.STAGES[stage](files[page - 1])
+            if stage in pipeline_debug.CONDITIONING_STAGES:
+                img = _get_page_image(session_id, page)
+                blocks = _compute_blocks(session_id, page)
+                if img is None or blocks is None:
+                    return jsonify({"error": "session/page not found"}), 404
+                stage_img = pipeline_debug.conditioning_stage(stage, img, blocks)
+            else:
+                stage_img = pipeline_debug.STAGES[stage](files[page - 1])
         except Exception as e:  # noqa: BLE001
             log.exception("debug stage %s failed: %s", stage, e)
             return jsonify({"error": str(e)}), 500

@@ -42,7 +42,11 @@ backend/sessions/
 backend/one_piece_1188.py
 
 # ----- Scripts (local utilities) -----
-scripts/
+scripts/*
+!scripts/evaluate_conditioning.py
+
+# Generated visual proof for local presentations.
+presentation_artifacts/
 
 # ----- Frontend (Vite + React) -----
 frontend/node_modules/

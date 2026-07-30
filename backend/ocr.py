@@ -14,7 +14,9 @@ from __future__ import annotations
 
 import io
 import logging
+import os
 import threading
+from pathlib import Path
 from typing import Optional
 
 import cv2
@@ -22,6 +24,12 @@ import numpy as np
 from PIL import Image
 
 log = logging.getLogger(__name__)
+
+_LOCAL_MODEL = Path(__file__).resolve().parent.parent / "local" / "manga-ocr-base"
+DEFAULT_MODEL_SOURCE = os.environ.get(
+    "MANGA_OCR_MODEL",
+    str(_LOCAL_MODEL) if _LOCAL_MODEL.is_dir() else "kha-white/manga-ocr-base",
+)
 
 
 class MangaOcrService:
@@ -109,7 +117,9 @@ class MangaOcrService:
                 self._available = False
                 return
             try:
-                self._mocr = MangaOcr()
+                # A local model directory makes OCR and benchmark CER work
+                # offline after the one-time Hugging Face download.
+                self._mocr = MangaOcr(pretrained_model_name_or_path=DEFAULT_MODEL_SOURCE)
                 self._available = True
                 log.info("manga-ocr loaded successfully.")
             except Exception as e:  # noqa: BLE001

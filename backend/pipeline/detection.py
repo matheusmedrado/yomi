@@ -1,49 +1,32 @@
-"""Text detection (Lab 10 — deep learning) + classical post-processing.
-
-Architecture of the detection stage
------------------------------------
-Per the project's PDI constraints, *text localization* is the one stage that
-is allowed to use a learned model. We reuse the same detector mokuro uses
-(`comic-text-detector`, a DBNet/YOLO text detector trained on manga), because
-classical blob/CC analysis cannot tell text ink from artwork ink — exactly the
-failure that a purely classical pipeline hits on real pages.
-
-However, classical PDI is *not* absent from this stage:
-
-  * Pre-processing (``preprocess``): grayscale, CLAHE, denoise, Otsu binarize
-    — Labs 02/06/07 — are applied to the page and used to build a debug view
-    and to drive the classical post-processing below.
-  * Post-processing (this module): the detector returns text *blocks* (one per
-    speech bubble / text column). Each block is bigger than what manga-ocr
-    expects, so we split it into chunks using the detector's *refined text
-    mask* and a **classical density-profile cut** (Labs 02/07): we convolve the
-    column-wise ink density with a Gaussian window and cut at the local minima
-    (the gaps between characters/lines). This is the same idea mokuro uses, but
-    implemented here with plain OpenCV/NumPy so the classical step is explicit
-    and documented.
-
-The result is a list of ``DetectedBlock`` objects, each carrying its bounding
-box (original image space), reading direction, and the sliced line crops ready
-for OCR.
-"""
+"""Text localization and crop preparation."""
 from __future__ import annotations
 
 import os
+import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Optional
 
 import cv2
 import numpy as np
+
+from .conditioning import ConditioningResult, condition_crop, raw_fallback
+from .pdi_localization import localize_page, localize_roi
+
+log = logging.getLogger(__name__)
 
 # comic-text-detector is a heavy DL dependency; import lazily so the rest of
 # the backend (e.g. unit tests on the classical segmentation) does not require
 # torch to be importable.
 try:  # pragma: no cover - import guard
     import sys
-    _ctd_path = str(Path(__file__).resolve().parent.parent / "comic_text_detector")
-    if _ctd_path not in sys.path:
-        sys.path.insert(0, _ctd_path)
+    # The vendored detector uses legacy absolute imports (``basemodel``) as
+    # well as package imports (``comic_text_detector.inference``), so both
+    # its package parent and its own directory must be importable.
+    _ctd_root = Path(__file__).resolve().parent.parent
+    for _ctd_path in (str(_ctd_root), str(_ctd_root / "comic_text_detector")):
+        if _ctd_path not in sys.path:
+            sys.path.insert(0, _ctd_path)
     from comic_text_detector.inference import TextDetector
     from comic_text_detector.utils.textmask import (
         REFINEMASK_INPAINT,
@@ -62,12 +45,13 @@ DEFAULT_MODEL = os.environ.get(
     str(Path.home() / ".cache" / "manga-ocr" / "comictextdetector.pt"),
 )
 
-# manga-ocr is trained on crops ~ height 64px; chunks beyond this aspect ratio
-# are split so each OCR call stays within the model's expected proportions.
 TEXT_HEIGHT = 64
 MAX_RATIO_VERT = 16
 MAX_RATIO_HOR = 8
 ANCHOR_WINDOW = 2
+DETECTION_MODES = ("baseline", "hybrid", "pdi_only")
+DEFAULT_DETECTION_MODE = os.environ.get("YOMI_DETECTION_MODE", "hybrid")
+HYBRID_RELOCALIZE_LINES = os.environ.get("YOMI_HYBRID_RELOCALIZE_LINES", "0") == "1"
 
 
 @dataclass
@@ -80,13 +64,14 @@ class DetectedBlock:
     h: int
     vertical: bool
     font_size: int
-    # OCR-ready crops (BGR uint8), already rotated to horizontal for vertical
-    # blocks. One crop per chunk (a block may be split into several).
     crops: List[np.ndarray] = None  # type: ignore
+    conditioning: List[ConditioningResult] = None  # type: ignore
 
     def __post_init__(self) -> None:
         if self.crops is None:
             self.crops = []
+        if self.conditioning is None:
+            self.conditioning = []
 
     @property
     def cx(self) -> float:
@@ -154,80 +139,54 @@ def get_detector(model_path: str = DEFAULT_MODEL, device: str = "cpu") -> _Detec
     return _detector_instance
 
 
-# ---------------------------------------------------------------------------
-# Classical post-processing: split a block into OCR-sized chunks by ink density
-# ---------------------------------------------------------------------------
-
-def _split_block_into_chunks(img: np.ndarray,
-                             mask_refined: np.ndarray,
-                             blk,
-                             line_idx: int,
-                             textheight: int = TEXT_HEIGHT,
-                             max_ratio: int = MAX_RATIO_VERT,
-                             anchor_window: int = ANCHOR_WINDOW) -> List[np.ndarray]:
-    """Split one text line/column into OCR-sized chunks.
-
-    Classical density-profile cut (Labs 02/07): we look at the *refined text
-    mask* for this line, sum ink along the reading axis to get a density
-    profile, smooth it with a Gaussian window, then cut at the deepest local
-    minima between characters/lines. Returns a list of BGR crops, rotated to
-    horizontal for vertical text.
-    """
+def _condition_line(block: DetectedBlock, raw: np.ndarray, max_ratio: int,
+                    line_idx: int) -> None:
+    if raw is None or raw.size == 0:
+        return
     try:
-        from scipy.signal.windows import gaussian
-    except Exception:  # pragma: no cover - scipy may be absent
-        def gaussian(M, std):  # minimal fallback
-            n = np.arange(0, M) - (M - 1) / 2
-            return np.exp(-(n ** 2) / (2 * (std ** 2)))
+        conditioned = condition_crop(raw, max_ratio=max_ratio)
+    except Exception as exc:  # unexpected: preserve a traceable raw escape hatch
+        log.warning("raw_fallback block=%s line=%s: %s", block.id, line_idx, exc)
+        conditioned = raw_fallback(raw)
+    block.crops.extend(conditioned.crops)
+    block.conditioning.append(conditioned)
 
-    line_crop = blk.get_transformed_region(img, line_idx, textheight)
-    h, w, *_ = line_crop.shape
-    ratio = w / h
-    if ratio <= max_ratio:
-        return [line_crop]
 
-    k = gaussian(textheight * 2, textheight / 8)
-    line_mask = blk.get_transformed_region(mask_refined, line_idx, textheight)
-    if line_mask.ndim == 3:
-        line_mask = cv2.cvtColor(line_mask, cv2.COLOR_BGR2GRAY)
-    num_chunks = int(np.ceil(ratio / max_ratio))
-
-    anchors = np.linspace(0, w, num_chunks + 1)[1:-1]
-    line_density = line_mask.sum(axis=0).astype(np.float32)
-    if line_density.max() > 0:
-        line_density = np.convolve(line_density, k, "same")
-        line_density /= line_density.max()
-
-    anchor_window *= textheight
-    cut_points: List[int] = []
-    for anchor in anchors:
-        anchor = int(anchor)
-        n0 = int(np.clip(anchor - anchor_window // 2, 0, w))
-        n1 = int(np.clip(anchor + anchor_window // 2, 0, w))
-        if n1 <= n0:
-            continue
-        p = int(line_density[n0:n1].argmin()) + n0
-        cut_points.append(p)
-
-    if not cut_points:
-        return [line_crop]
-    return [c for c in np.split(line_crop, cut_points, axis=1)]
+def _pdi_only_blocks(img: np.ndarray) -> List[DetectedBlock]:
+    blocks: List[DetectedBlock] = []
+    for next_id, region in enumerate(localize_page(img)):
+        block = DetectedBlock(
+            id=next_id, x=region.x, y=region.y, w=region.w, h=region.h,
+            vertical=region.vertical, font_size=0,
+        )
+        for line_idx, line in enumerate(region.lines):
+            max_ratio = MAX_RATIO_VERT if line.vertical else MAX_RATIO_HOR
+            _condition_line(block, line.raw, max_ratio, line_idx)
+        if block.crops:
+            blocks.append(block)
+    return blocks
 
 
 def detect_blocks(img: np.ndarray,
                   detector: Optional[_Detector] = None,
-                  device: str = "cpu") -> List[DetectedBlock]:
+                  device: str = "cpu",
+                  mode: str | None = None) -> List[DetectedBlock]:
     """Detect text blocks on a full-resolution BGR page.
 
     Returns a list of ``DetectedBlock`` in rough manga reading order
     (top→bottom, right→left). Blocks carry OCR-ready crops.
     """
+    mode = mode or DEFAULT_DETECTION_MODE
+    if mode not in DETECTION_MODES:
+        raise ValueError(f"unknown detection mode {mode!r}; expected one of {DETECTION_MODES}")
+    if mode == "pdi_only":
+        return _pdi_only_blocks(img)
     if detector is None:
         detector = get_detector(device=device)
     if not detector.available:
         return []
 
-    mask, mask_refined, blk_list = detector.detect(img)
+    _mask, _mask_refined, blk_list = detector.detect(img)
 
     out: List[DetectedBlock] = []
     next_id = 0
@@ -243,17 +202,28 @@ def detect_blocks(img: np.ndarray,
             lines = list(blk.lines_array())
         except Exception:  # pragma: no cover
             lines = []
-        max_ratio = MAX_RATIO_VERT if vertical else MAX_RATIO_HOR
+        if mode == "hybrid" and HYBRID_RELOCALIZE_LINES:
+            pdi_region = localize_roi(img, (x1, y1, block.w, block.h), vertical)
+            if pdi_region.lines and len(pdi_region.lines) <= len(lines):
+                for li, line in enumerate(pdi_region.lines):
+                    max_ratio = MAX_RATIO_VERT if line.vertical else MAX_RATIO_HOR
+                    _condition_line(block, line.raw, max_ratio, li)
+                out.append(block)
+                next_id += 1
+                continue
+
         for li in range(len(lines)):
-            chunks = _split_block_into_chunks(
-                img, mask_refined, blk, li,
-                textheight=TEXT_HEIGHT, max_ratio=max_ratio,
-                anchor_window=ANCHOR_WINDOW,
+            raw = blk.get_transformed_region(img, li, TEXT_HEIGHT)
+            if raw is None or raw.size == 0:
+                continue
+            horizontal_raw = (
+                cv2.rotate(raw, cv2.ROTATE_90_CLOCKWISE) if vertical else raw
             )
-            for c in chunks:
-                if vertical:
-                    c = cv2.rotate(c, cv2.ROTATE_90_CLOCKWISE)
-                block.crops.append(c)
+            if mode == "baseline":
+                block.crops.append(horizontal_raw)
+            else:
+                max_ratio = MAX_RATIO_VERT if vertical else MAX_RATIO_HOR
+                _condition_line(block, horizontal_raw, max_ratio, li)
         out.append(block)
         next_id += 1
 

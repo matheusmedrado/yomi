@@ -1,19 +1,4 @@
-"""Text-region segmentation (Labs 02, 06, 07, 08).
-
-Pipeline:
-    gray / ink mask
-        -> Otsu threshold (Lab 06)
-        -> Mathematical morphology to clean the binary mask (Lab 07)
-        -> Connected components (Lab 02)
-        -> Optional watershed pass (Lab 08) for components that look like
-           multiple touching text regions
-        -> Group components into text lines (or vertical columns) for the
-           hover UI to reason about.
-
-The output of `detect_text_regions` is a list of `TextRegion`s in original
-image coordinates. Each region has a stable integer `id` so the frontend can
-address it without depending on its position.
-"""
+"""Thresholding, morphology, connected components and watershed helpers."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -394,34 +379,7 @@ def detect_text_regions(gray: np.ndarray, mask: np.ndarray | None = None,
                         remove_rules: bool = False,
                         rule_len: int | None = None,
                         ) -> list[TextRegion]:
-    """Run the full segmentation pipeline on a (resized) gray page.
-
-    Steps (each one a lab technique):
-      1. Binarize (Otsu, Lab 06) — from `mask` (color, Lab 09) or `gray`.
-      2. Morphology cleanup (Lab 07).
-      3. **Merge dilation** (Lab 07): a wide-ish rectangular kernel merges
-         strokes/characters into text-line blocks without merging separate
-         lines or neighboring bubbles.
-      4. Connected components (Lab 02) on the merged mask.
-      5. Filters:
-         - drop blocks covering more than `max_page_fraction` of the page
-           (page frames/panels);
-         - drop blocks that touch the image border AND span more than half
-           the page in one axis (scan borders, panel frames);
-         - drop blocks whose *ink fill ratio* (in the un-dilated binary) is
-           outside [`min_fill`, `max_fill`]. Hollow bubble/panel outlines have
-           very low fill; solid art/screentone blocks have very high fill.
-      6. Optional watershed (Lab 08) on the surviving blobs.
-      7. Sort in rough reading order.
-
-    Parameters
-    ----------
-    gray, mask, min_area : as before.
-    use_watershed : off by default; enable to split dense merged blobs.
-    vertical : reading-order hint used only for the final sort.
-    min_fill, max_fill : ink-density filter range (0..1). Defaults keep
-        everything (unit-test friendly); the app passes tighter values.
-    """
+    """Extract candidate text regions from a grayscale image or mask."""
     if mask is not None and mask.shape[:2] != gray.shape[:2]:
         mask = cv2.resize(mask, (gray.shape[1], gray.shape[0]),
                           interpolation=cv2.INTER_NEAREST)

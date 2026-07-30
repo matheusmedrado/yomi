@@ -62,6 +62,7 @@ export function useKeyboardShortcuts() {
             "mask",
             "cc",
             "watershed",
+            "conditioning_overlay",
             null,
           ];
           const idx = debugStage ? order.indexOf(debugStage) : -1;

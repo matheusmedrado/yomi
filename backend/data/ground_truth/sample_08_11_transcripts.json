@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "note": "Texto transcrito para o benchmark. As caixas serão calibradas separadamente no tamanho real das imagens.",
+  "pages": [
+    {
+      "page": "08.png",
+      "regions": [
+        {"bubble_id": "top_right_bubble", "text": "うおー\n追ってくる!!\n爆弾だろ\nアレ!!"},
+        {"bubble_id": "top_left_bubble", "text": "“ゴムゴム\nの”"},
+        {"bubble_id": "middle_right_small_1", "text": "!!"},
+        {"bubble_id": "middle_right_small_2", "text": "!?"},
+        {"bubble_id": "bottom_right_jagged", "text": "“JET\n銃乱打”!!"},
+        {"bubble_id": "bottom_center_small_1", "text": "ギャ"},
+        {"bubble_id": "bottom_center_small_2", "text": "!?"},
+        {"bubble_id": "bottom_left_bubble", "text": "“ゴムゴム\nの”ォ〜"},
+        {"bubble_id": "bottom_left_small_bubble", "text": "!!"}
+      ],
+      "annotation_width": 1000,
+      "annotation_height": 1500,
+      "rough_boxes": {
+        "top_right_bubble": [650, 50, 250, 200], "top_left_bubble": [50, 50, 150, 150],
+        "middle_right_small_1": [850, 450, 80, 80], "middle_right_small_2": [820, 550, 80, 80],
+        "bottom_right_jagged": [700, 650, 200, 250], "bottom_center_small_1": [300, 800, 60, 80],
+        "bottom_center_small_2": [280, 900, 80, 80], "bottom_left_bubble": [80, 1200, 150, 200],
+        "bottom_left_small_bubble": [50, 1100, 80, 80]
+      }
+    },
+    {
+      "page": "09.png",
+      "regions": [
+        {"bubble_id": "right_page_top_right_jagged", "text": "魔神!!!"},
+        {"bubble_id": "right_page_top_center_sfx", "text": "ぬももも"},
+        {"bubble_id": "right_page_top_left_bird", "text": "ほっほっ\nほっほっ\nほっ!!"},
+        {"bubble_id": "right_page_top_left_bird_dots", "text": "……"},
+        {"bubble_id": "right_page_middle_large_sfx", "text": "どん!!"},
+        {"bubble_id": "right_page_middle_left", "text": "ロキとの\n戦い見て\nなかったわけ\nじゃねェぞ!!"},
+        {"bubble_id": "right_page_bottom_panel_right", "text": "あいつの\n“死”は!!"},
+        {"bubble_id": "right_page_bottom_panel_left", "text": "ムダに\nしねェ!!!"},
+        {"bubble_id": "left_page_top_panel_right", "text": "生きてるわ\nアホんだら\n!!"},
+        {"bubble_id": "left_page_top_panel_right_small_outside", "text": "ゲホ\nゼー…"},
+        {"bubble_id": "left_page_top_panel_left", "text": "おー!!\n生きてた\nのか!!\nロキ!!"},
+        {"bubble_id": "left_page_top_panel_left_dots", "text": "……"},
+        {"bubble_id": "left_page_middle_panel_right", "text": "しまった\n…くそ"},
+        {"bubble_id": "left_page_middle_panel_center", "text": "クリリ\nリリ!!"},
+        {"bubble_id": "left_page_middle_panel_left", "text": "どけ\nラグニル!!"},
+        {"bubble_id": "left_page_bottom_panel_right", "text": "!?"},
+        {"bubble_id": "left_page_bottom_panel_left", "text": "唐草瓦\n正拳!!!"}
+      ],
+      "annotation_width": 1600,
+      "annotation_height": 1100,
+      "rough_boxes": {
+        "right_page_top_right_jagged": [1360, 60, 180, 160], "right_page_top_center_sfx": [1050, 30, 250, 130],
+        "right_page_top_left_bird": [860, 70, 120, 180], "right_page_top_left_bird_dots": [800, 140, 50, 80],
+        "right_page_middle_large_sfx": [1250, 600, 300, 220], "right_page_middle_left": [920, 640, 130, 200],
+        "right_page_bottom_panel_right": [1380, 860, 110, 160], "right_page_bottom_panel_left": [840, 860, 110, 160],
+        "left_page_top_panel_right": [600, 40, 100, 160], "left_page_top_panel_right_small_outside": [550, 100, 50, 100],
+        "left_page_top_panel_left": [150, 40, 120, 180], "left_page_top_panel_left_dots": [280, 100, 70, 70],
+        "left_page_middle_panel_right": [680, 480, 70, 120], "left_page_middle_panel_center": [260, 470, 70, 120],
+        "left_page_middle_panel_left": [60, 440, 110, 100], "left_page_bottom_panel_right": [680, 660, 50, 70],
+        "left_page_bottom_panel_left": [50, 850, 100, 180]
+      }
+    },
+    {
+      "page": "10.png",
+      "regions": [
+        {"bubble_id": "top_panel_right", "text": "ジン\nベエ!!"},
+        {"bubble_id": "top_panel_center", "text": "ルフィ!!\nお前さんが\nこいつを"},
+        {"bubble_id": "top_panel_left", "text": "守れと\n言うんなら\nそうするが!?"},
+        {"bubble_id": "middle_panel_right_1", "text": "よかった!!\n頼む\nジンベエ!!\nダチなんだ!!"},
+        {"bubble_id": "middle_panel_right_2", "text": "誰が\nダチだ…\nチビ助が\n…!!"},
+        {"bubble_id": "middle_panel_center", "text": "よし!!\n任せろ!!\nそっちに\n集中せい!!"},
+        {"bubble_id": "middle_panel_left_1", "text": "あれ\nルフィ!?\nさっきの\n奴と\n戦ってる!!"},
+        {"bubble_id": "middle_panel_left_2", "text": "大丈夫か!?\nあいつ\n何者なん\nだよ!!"},
+        {"bubble_id": "bottom_panel_right_1", "text": "“神の騎士団”\nより偉い人\nなんて…"},
+        {"bubble_id": "bottom_panel_right_2", "text": "「五老星」\nしかいない\n筈ですが\n…"},
+        {"bubble_id": "bottom_panel_center", "text": "“騎士団長”\nじゃねェか?\n…きっと\nそうだ!!"},
+        {"bubble_id": "bottom_panel_left_1", "text": "世界政府\nほど…"},
+        {"bubble_id": "bottom_panel_left_2", "text": "謎に包まれた\n組織は\nありません"}
+      ],
+      "annotation_width": 1000,
+      "annotation_height": 1500,
+      "rough_boxes": {
+        "top_panel_right": [750, 50, 150, 150], "top_panel_center": [350, 50, 200, 150],
+        "top_panel_left": [50, 50, 150, 200], "middle_panel_right_1": [700, 350, 180, 250],
+        "middle_panel_right_2": [800, 600, 150, 200], "middle_panel_center": [300, 550, 150, 250],
+        "middle_panel_left_1": [50, 350, 120, 250], "middle_panel_left_2": [50, 700, 150, 200],
+        "bottom_panel_right_1": [750, 1000, 180, 200], "bottom_panel_right_2": [550, 1000, 150, 200],
+        "bottom_panel_center": [400, 1000, 150, 200], "bottom_panel_left_1": [200, 1100, 120, 150],
+        "bottom_panel_left_2": [50, 1200, 150, 250]
+      }
+    },
+    {
+      "page": "11.png",
+      "regions": [
+        {"bubble_id": "top_panel_right_1", "text": "おい!!\nブルック!!\nもう引き\n出せるぞ!!"},
+        {"bubble_id": "top_panel_right_2", "text": "ああ…\nシュリ姫!!"},
+        {"bubble_id": "top_panel_center_1", "text": "どうしま\nしょう!?\n凍ってた人って\nどうすれば!?"},
+        {"bubble_id": "top_panel_center_2", "text": "えーと!!\nロビンとルフィが\n凍った時は…"},
+        {"bubble_id": "top_panel_center_3", "text": "凍った事\nあるん\nですか!?"},
+        {"bubble_id": "top_panel_left_1", "text": "軍子…\nあの“氷”は\n壊せて\nいなかった\nのか…"},
+        {"bubble_id": "top_panel_left_2", "text": "軍子を\nシュリ姫と\n呼ぶ…"},
+        {"bubble_id": "top_panel_left_3", "text": "アフロの\n男…!!"},
+        {"bubble_id": "top_panel_left_4", "text": "まさかな"},
+        {"bubble_id": "top_panel_left_5", "text": "“ゴム\nゴムの”"},
+        {"bubble_id": "middle_panel_jagged", "text": "“スキあり\n銃弾”!!!"},
+        {"bubble_id": "bottom_panel_right", "text": "見ていたん\nじゃなかった\nか?"},
+        {"bubble_id": "bottom_panel_center", "text": "巨体の\nロキがどう\nなったか…"}
+      ],
+      "annotation_width": 1000,
+      "annotation_height": 1500,
+      "rough_boxes": {
+        "top_panel_right_1": [800, 50, 120, 200], "top_panel_right_2": [650, 80, 120, 150],
+        "top_panel_center_1": [450, 50, 150, 200], "top_panel_center_2": [350, 150, 120, 180],
+        "top_panel_center_3": [400, 350, 100, 150], "top_panel_left_1": [200, 50, 120, 250],
+        "top_panel_left_2": [250, 320, 100, 150], "top_panel_left_3": [150, 350, 80, 120],
+        "top_panel_left_4": [100, 400, 80, 100], "top_panel_left_5": [50, 200, 100, 150],
+        "middle_panel_jagged": [100, 550, 180, 250], "bottom_panel_right": [800, 1100, 120, 180],
+        "bottom_panel_center": [150, 1200, 150, 200]
+      }
+    }
+  ]
+}

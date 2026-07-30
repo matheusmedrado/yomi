@@ -1,10 +1,4 @@
-"""Pipeline debug visualizations.
-
-Used by the `/api/debug/<stage>/<session_id>/<n>` endpoint to return
-intermediate images of the classical PDI pipeline (gray, mask, Otsu, CC,
-watershed). This is what we point the professor at during the demo to
-show that the work isn't magic — each stage is a real lab technique.
-"""
+"""Pipeline debug visualizations."""
 from __future__ import annotations
 
 import cv2
@@ -83,3 +77,73 @@ STAGES = {
     "cc": stage_cc,
     "watershed": stage_watershed,
 }
+
+CONDITIONING_STAGES = {
+    "conditioning_raw",
+    "conditioning_enhanced",
+    "conditioning_mask",
+    "conditioning_components",
+    "conditioning_projection",
+    "conditioning_final",
+    "conditioning_overlay",
+}
+
+
+def _selected_conditioning(blocks):
+    for block in blocks:
+        if getattr(block, "conditioning", None):
+            return block, block.conditioning[0]
+    return None, None
+
+
+def _crop_board(crops: list[np.ndarray]) -> np.ndarray:
+    """Put split final OCR crops on one readable debug board."""
+    if not crops:
+        return np.full((80, 240, 3), 255, dtype=np.uint8)
+    height = max(1, max(c.shape[0] for c in crops))
+    tiles = []
+    for crop in crops:
+        if crop.ndim == 2:
+            crop = cv2.cvtColor(crop, cv2.COLOR_GRAY2BGR)
+        if crop.shape[0] != height:
+            crop = cv2.resize(crop, (max(1, int(crop.shape[1] * height / crop.shape[0])), height))
+        tiles.append(crop)
+    gap = np.full((height, 8, 3), 230, dtype=np.uint8)
+    return np.concatenate([tile for pair in zip(tiles, [gap] * len(tiles)) for tile in pair][:-1], axis=1)
+
+
+def conditioning_stage(stage: str, page_bgr: np.ndarray, blocks) -> np.ndarray:
+    """Render classical crop evidence or a page-level conditioning overlay."""
+    if stage not in CONDITIONING_STAGES:
+        raise ValueError(f"unknown conditioning stage: {stage}")
+    if stage == "conditioning_overlay":
+        out = page_bgr.copy()
+        for block in blocks:
+            results = getattr(block, "conditioning", [])
+            states = {r.fallback for r in results}
+            color = (40, 170, 40)
+            label = "pdi"
+            if "raw_fallback" in states:
+                color, label = (30, 30, 220), "raw"
+            elif "normalized" in states:
+                color, label = (0, 180, 230), "normalized"
+            cv2.rectangle(out, (block.x, block.y),
+                          (block.x + block.w, block.y + block.h), color, 2)
+            cv2.putText(out, f"{block.id}:{label}", (block.x, max(14, block.y - 4)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.42, color, 1, cv2.LINE_AA)
+        return out
+
+    _block, result = _selected_conditioning(blocks)
+    if result is None:
+        return np.full((80, 320, 3), 255, dtype=np.uint8)
+    if stage == "conditioning_raw":
+        return result.raw
+    if stage == "conditioning_enhanced":
+        return cv2.cvtColor(result.enhanced, cv2.COLOR_GRAY2BGR)
+    if stage == "conditioning_mask":
+        return cv2.cvtColor(result.mask, cv2.COLOR_GRAY2BGR)
+    if stage == "conditioning_components":
+        return result.components_overlay
+    if stage == "conditioning_projection":
+        return result.projection
+    return _crop_board(result.crops)
