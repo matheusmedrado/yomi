@@ -1,12 +1,11 @@
 """Wrapper do manga-ocr.
 
-O modelo é carregado **sob demanda no primeiro uso** pra que o resto do app
-fique responsivo mesmo se o primeiro hover vier a frio. Mantemos o pipeline
-de entrada simples: um crop BGR apertado → BGR→RGB → PIL → modelo.
+O modelo é carregado no primeiro uso pra que o resto do app
+fique responsivo mesmo se o primeiro hover nao estiver "aquecido", igual um motor mesmo kkkk. 
+Mantem o pipeline de entrada simples. 
 Uma borda pequena ao redor do crop ajuda o reconhecedor com as beiradas do balão.
 
-Se o `manga-ocr` não estiver instalado (ex.: durante a parte do desenvolvimento
-em que só queremos o pipeline clássico rodando), `MangaOcrService.recognize`
+Se o `manga-ocr` não estiver instalado, `MangaOcrService.recognize`
 devolve string vazia e loga uma vez. É isso que permite o resto do projeto
 funcionar sem a dependência pesada de DL.
 """

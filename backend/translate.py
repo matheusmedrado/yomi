@@ -1,9 +1,4 @@
 """Tradução Japonês → Português via endpoint gratuito do Google Translate.
-
-Usa o endpoint não documentado `translate.googleapis.com` (o mesmo usado
-pela extensão de navegador). Grátis, sem chave de API, limites generosos pra
-uso pessoal. Em caso de falha retorna string vazia pra UI nunca quebrar —
-a linha de tradução simplesmente some.
 """
 from __future__ import annotations
 

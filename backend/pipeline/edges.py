@@ -1,9 +1,9 @@
 """Etapa de detecção de bordas (Lab 05).
 
-Provides the three classical edge operators that show up in the course:
-Sobel (gradient magnitude), Laplacian (second-order derivative) and Canny
-(gradient + non-maximum suppression + hysteresis). All return uint8 images
-with the same shape as the input.
+Fornece os três operadores clássicos de borda que aparecem na disciplina:
+Sobel (magnitude do gradiente), Laplaciano (derivada de segunda ordem) e Canny
+(gradiente + supressão de não-máximos + histerese). Todos retornam imagens
+uint8 com o mesmo formato da entrada.
 """
 from __future__ import annotations
 
