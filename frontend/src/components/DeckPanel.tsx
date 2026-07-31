@@ -94,6 +94,7 @@ export function DeckPanel() {
                           sessionId,
                           c.page,
                           c.region_id,
+                          c.detection_mode,
                         )}
                         alt={`Região de texto da página ${c.page}`}
                         className="w-12 h-12 object-cover shrink-0 border border-ink/10"

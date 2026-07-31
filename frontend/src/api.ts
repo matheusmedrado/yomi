@@ -1,4 +1,4 @@
-import type { LoadResponse, OcrResult, RegionsResponse, StudyCard } from "./types";
+import type { DetectionMode, LoadResponse, OcrResult, RegionsResponse, StudyCard } from "./types";
 
 const API = "/api";
 
@@ -37,25 +37,29 @@ export function regionImageUrl(
   sessionId: string,
   page: number,
   regionId: number,
+  mode: DetectionMode = "hybrid",
 ): string {
-  return `${API}/region_image/${sessionId}/${page}/${regionId}`;
+  return `${API}/region_image/${sessionId}/${page}/${regionId}?mode=${mode}`;
 }
 
 export function debugImageUrl(
   sessionId: string,
   page: number,
   stage: string,
+  mode: DetectionMode = "hybrid",
 ): string {
-  return `${API}/debug/${stage}/${sessionId}/${page}`;
+  return `${API}/debug/${stage}/${sessionId}/${page}?mode=${mode}`;
 }
 
 export function getRegions(
   sessionId: string,
   page: number,
+  mode: DetectionMode = "hybrid",
 ): Promise<RegionsResponse> {
   return postJson<RegionsResponse>("/regions", {
     session_id: sessionId,
     page,
+    mode,
   });
 }
 
@@ -63,11 +67,13 @@ export function ocr(
   sessionId: string,
   page: number,
   regionId: number,
+  mode: DetectionMode = "hybrid",
 ): Promise<OcrResult> {
   return postJson<OcrResult>("/ocr", {
     session_id: sessionId,
     page,
     region_id: regionId,
+    mode,
   });
 }
 
@@ -83,6 +89,7 @@ export async function exportDeck(
       cards: cards.map((c) => ({
         page: c.page,
         region_id: c.region_id,
+        detection_mode: c.detection_mode,
         text: c.text,
         furigana: c.furigana,
         romaji: c.romaji,

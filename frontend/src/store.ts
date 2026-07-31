@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { OcrResult, TextRegion, AppView, DebugStage, StudyCard } from "./types";
+import type { OcrResult, TextRegion, AppView, DebugStage, StudyCard, DetectionMode } from "./types";
 
 interface UiState {
   view: AppView;
@@ -11,12 +11,14 @@ interface UiState {
   currentPage: number;
   setSession: (s: { sessionId: string; pages: number; title?: string }) => void;
   setCurrentPage: (p: number) => void;
+  detectionMode: DetectionMode;
+  setDetectionMode: (mode: DetectionMode) => void;
 
   pageSizeByPage: Record<number, { w: number; h: number }>;
   setPageSize: (page: number, s: { w: number; h: number }) => void;
 
-  regionsByPage: Record<number, TextRegion[]>;
-  setRegions: (page: number, regions: TextRegion[]) => void;
+  regionsByPage: Record<string, TextRegion[]>;
+  setRegions: (key: string, regions: TextRegion[]) => void;
 
   ocrCache: Record<string, OcrResult>;
   cacheOcr: (key: string, result: OcrResult) => void;
@@ -52,8 +54,9 @@ const initial = {
   title: null as string | null,
   totalPages: 0,
   currentPage: 1,
+  detectionMode: "hybrid" as DetectionMode,
   pageSizeByPage: {} as Record<number, { w: number; h: number }>,
-  regionsByPage: {} as Record<number, TextRegion[]>,
+  regionsByPage: {} as Record<string, TextRegion[]>,
   ocrCache: {} as Record<string, OcrResult>,
   cards: [] as StudyCard[],
   deckOpen: false,
@@ -76,6 +79,7 @@ export const useStore = create<UiState>((set) => ({
       totalPages: pages,
       title: title ?? null,
       currentPage: 1,
+      detectionMode: "hybrid",
       pageSizeByPage: {},
       regionsByPage: {},
       ocrCache: {},
@@ -85,14 +89,15 @@ export const useStore = create<UiState>((set) => ({
     }),
 
   setCurrentPage: (p) => set({ currentPage: p }),
+  setDetectionMode: (detectionMode) => set({ detectionMode }),
   setPageSize: (page, s) =>
     set((st) => ({
       pageSizeByPage: { ...st.pageSizeByPage, [page]: s },
     })),
 
-  setRegions: (page, regions) =>
+  setRegions: (key, regions) =>
     set((s) => ({
-      regionsByPage: { ...s.regionsByPage, [page]: regions },
+      regionsByPage: { ...s.regionsByPage, [key]: regions },
     })),
 
   cacheOcr: (key, result) =>

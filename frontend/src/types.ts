@@ -6,6 +6,8 @@ export interface TextRegion {
   h: number;
 }
 
+export type DetectionMode = "hybrid" | "baseline" | "pdi_only";
+
 export type ScriptType = "hiragana" | "katakana" | "kanji" | "other";
 
 export interface OcrToken {
@@ -55,6 +57,12 @@ export type DebugStage =
   | "otsu"
   | "cc"
   | "watershed"
+  | "conditioning_raw"
+  | "conditioning_enhanced"
+  | "conditioning_mask"
+  | "conditioning_components"
+  | "conditioning_projection"
+  | "conditioning_final"
   | "conditioning_overlay";
 
 export type AppView = "upload" | "reader";
@@ -63,6 +71,7 @@ export interface StudyCard {
   id: string;
   page: number;
   region_id: number;
+  detection_mode: DetectionMode;
   text: string;
   furigana: string;
   romaji: string;

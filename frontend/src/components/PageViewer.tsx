@@ -4,13 +4,33 @@ import { useStore } from "../store";
 import { debugImageUrl, getRegions, ocr, pageImageUrl } from "../api";
 import { TextOverlay } from "./TextOverlay";
 import { Eye, EyeOff, Focus, ScanSearch } from "lucide-react";
-import type { TextRegion } from "../types";
+import type { DetectionMode, TextRegion } from "../types";
 
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 5;
-const DEBUG_ORDER = ["otsu", "mask", "cc", "watershed", "conditioning_overlay"] as const;
+const DEBUG_ORDER = [
+  "conditioning_overlay",
+  "conditioning_raw",
+  "conditioning_enhanced",
+  "conditioning_mask",
+  "conditioning_components",
+  "conditioning_projection",
+  "conditioning_final",
+  "otsu",
+  "mask",
+  "cc",
+  "watershed",
+] as const;
 const CLICK_THRESHOLD = 6;
 const CLICK_TIME = 400;
+const MODE_LABELS: Record<DetectionMode, string> = {
+  hybrid: "Hybrid · DL + PDI",
+  baseline: "Baseline · crop cru",
+  pdi_only: "PDI-only · experimental",
+};
+
+const regionKey = (mode: DetectionMode, page: number, regionId: number) =>
+  `${mode}:${page}:${regionId}`;
 
 const clamp = (v: number, lo: number, hi: number) =>
   Math.max(lo, Math.min(hi, v));
@@ -19,10 +39,13 @@ export function PageViewer() {
   const sessionId = useStore((s) => s.sessionId)!;
   const currentPage = useStore((s) => s.currentPage);
   const setCurrentPage = useStore((s) => s.setCurrentPage);
+  const detectionMode = useStore((s) => s.detectionMode);
+  const setDetectionMode = useStore((s) => s.setDetectionMode);
   const totalPages = useStore((s) => s.totalPages);
   const pageSize = useStore((s) => s.pageSizeByPage[currentPage]) ?? null;
   const setPageSize = useStore((s) => s.setPageSize);
-  const regions = useStore((s) => s.regionsByPage[currentPage]) ?? EMPTY;
+  const regionsKey = `${detectionMode}:${currentPage}`;
+  const regions = useStore((s) => s.regionsByPage[regionsKey]) ?? EMPTY;
   const setRegions = useStore((s) => s.setRegions);
   const ocrCache = useStore((s) => s.ocrCache);
   const cacheOcr = useStore((s) => s.cacheOcr);
@@ -57,12 +80,12 @@ export function PageViewer() {
 
   useEffect(() => {
     if (!sessionId) return;
-    if (useStore.getState().regionsByPage[currentPage]) return;
+    if (useStore.getState().regionsByPage[regionsKey]) return;
     let cancelled = false;
-    getRegions(sessionId, currentPage)
+    getRegions(sessionId, currentPage, detectionMode)
       .then((res) => {
         if (cancelled) return;
-        setRegions(currentPage, res.regions);
+        setRegions(regionsKey, res.regions);
         setPageSize(currentPage, { w: res.width, h: res.height });
       })
       .catch(() => {
@@ -71,7 +94,7 @@ export function PageViewer() {
     return () => {
       cancelled = true;
     };
-  }, [sessionId, currentPage, setRegions, setPageSize]);
+  }, [sessionId, currentPage, detectionMode, regionsKey, setRegions, setPageSize]);
 
   useEffect(() => {
     setZoom(1);
@@ -79,7 +102,7 @@ export function PageViewer() {
     hoverRef.current = null;
     setHoverId(null);
     setKeyboardFocusId(null);
-  }, [currentPage]);
+  }, [currentPage, detectionMode]);
 
   useEffect(() => {
     const el = stageRef.current;
@@ -130,10 +153,10 @@ export function PageViewer() {
 
   const ensureOcr = useCallback(
     (regionId: number) => {
-      const key = `${currentPage}:${regionId}`;
+      const key = regionKey(detectionMode, currentPage, regionId);
       if (useStore.getState().ocrCache[key]) return;
       setLoadingId(regionId);
-      ocr(sessionId, currentPage, regionId)
+      ocr(sessionId, currentPage, regionId, detectionMode)
         .then((res) => {
           cacheOcr(key, res);
         })
@@ -152,7 +175,7 @@ export function PageViewer() {
           setLoadingId((cur) => (cur === regionId ? null : cur)),
         );
     },
-    [sessionId, currentPage, cacheOcr],
+    [sessionId, currentPage, detectionMode, cacheOcr],
   );
 
   const navigateRegion = useCallback(
@@ -200,14 +223,15 @@ export function PageViewer() {
         clearKeyboardFocus();
       } else if (e.key === "Enter" && keyboardFocusId !== null) {
         e.preventDefault();
-        const key = `${currentPage}:${keyboardFocusId}`;
+        const key = regionKey(detectionMode, currentPage, keyboardFocusId);
         const result = useStore.getState().ocrCache[key];
         if (result && result.text) {
-          const cardId = `${sessionId}:${currentPage}:${keyboardFocusId}`;
+          const cardId = `${sessionId}:${detectionMode}:${currentPage}:${keyboardFocusId}`;
           addCard({
             id: cardId,
             page: currentPage,
             region_id: keyboardFocusId,
+            detection_mode: detectionMode,
             text: result.text,
             furigana: result.furigana,
             romaji: result.romaji,
@@ -228,6 +252,7 @@ export function PageViewer() {
     clearKeyboardFocus,
     keyboardFocusId,
     currentPage,
+    detectionMode,
     sessionId,
     addCard,
     setActiveCardId,
@@ -276,14 +301,15 @@ export function PageViewer() {
     if (dx < CLICK_THRESHOLD && dy < CLICK_THRESHOLD && elapsed < CLICK_TIME) {
       const id = hitTest(e.clientX, e.clientY);
       if (id !== null) {
-        const key = `${currentPage}:${id}`;
+        const key = regionKey(detectionMode, currentPage, id);
         const result = useStore.getState().ocrCache[key];
         if (result && result.text) {
-          const cardId = `${sessionId}:${currentPage}:${id}`;
+          const cardId = `${sessionId}:${detectionMode}:${currentPage}:${id}`;
           addCard({
             id: cardId,
             page: currentPage,
             region_id: id,
+            detection_mode: detectionMode,
             text: result.text,
             furigana: result.furigana,
             romaji: result.romaji,
@@ -321,7 +347,9 @@ export function PageViewer() {
     };
   }
 
-  const cacheKey = activeId !== null ? `${currentPage}:${activeId}` : null;
+  const cacheKey = activeId !== null
+    ? regionKey(detectionMode, currentPage, activeId)
+    : null;
   const currentResult = cacheKey ? ocrCache[cacheKey] ?? null : null;
   const overlayLoading =
     activeId !== null && loadingId === activeId && !currentResult;
@@ -349,6 +377,19 @@ export function PageViewer() {
         >
           →
         </button>
+        <span className="w-px h-5 bg-ink/15 mx-1" />
+        <label className="sr-only" htmlFor="detection-mode">Modo de detecção</label>
+        <select
+          id="detection-mode"
+          value={detectionMode}
+          onChange={(e) => setDetectionMode(e.target.value as DetectionMode)}
+          className="max-w-[180px] bg-transparent font-mono text-[10px] text-ink-muted px-1.5 py-1 outline-none focus:ring-2 focus:ring-vermilion/50 rounded"
+          title="Modo de detecção e preparação para OCR"
+        >
+          {(Object.keys(MODE_LABELS) as DetectionMode[]).map((mode) => (
+            <option key={mode} value={mode}>{MODE_LABELS[mode]}</option>
+          ))}
+        </select>
         <span className="w-px h-5 bg-ink/15 mx-1" />
         <button
           onClick={() => setZoom((z) => clamp(z / 1.15, MIN_ZOOM, MAX_ZOOM))}
@@ -521,7 +562,7 @@ export function PageViewer() {
 
           {debugStage && (
             <img
-              src={debugImageUrl(sessionId, currentPage, debugStage)}
+              src={debugImageUrl(sessionId, currentPage, debugStage, detectionMode)}
               alt={`Estágio: ${debugStage}`}
               draggable={false}
               className="absolute inset-0 w-full h-full object-fill mix-blend-multiply opacity-90 pointer-events-none"

@@ -85,7 +85,7 @@ export function FlashcardModal() {
             >
               <div className="flex-1 flex items-center justify-center p-6 bg-paper-warm">
                 <img
-                  src={regionImageUrl(sessionId, card.page, card.region_id)}
+                  src={regionImageUrl(sessionId, card.page, card.region_id, card.detection_mode)}
                   alt={`Região de texto da página ${card.page}`}
                   className="max-h-[200px] max-w-full object-contain shadow-editorial"
                 />

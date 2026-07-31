@@ -96,6 +96,13 @@ def _selected_conditioning(blocks):
     return None, None
 
 
+def _status_board(message: str) -> np.ndarray:
+    out = np.full((80, 420, 3), 255, dtype=np.uint8)
+    cv2.putText(out, message, (12, 46), cv2.FONT_HERSHEY_SIMPLEX,
+                0.55, (40, 40, 40), 1, cv2.LINE_AA)
+    return out
+
+
 def _crop_board(crops: list[np.ndarray]) -> np.ndarray:
     """Put split final OCR crops on one readable debug board."""
     if not crops:
@@ -121,21 +128,27 @@ def conditioning_stage(stage: str, page_bgr: np.ndarray, blocks) -> np.ndarray:
         for block in blocks:
             results = getattr(block, "conditioning", [])
             states = {r.fallback for r in results}
-            color = (40, 170, 40)
-            label = "pdi"
-            if "raw_fallback" in states:
+            if not results:
+                color, label = (100, 100, 100), "raw"
+            elif "raw_fallback" in states:
                 color, label = (30, 30, 220), "raw"
             elif "normalized" in states:
                 color, label = (0, 180, 230), "normalized"
+            else:
+                color, label = (40, 170, 40), "pdi"
             cv2.rectangle(out, (block.x, block.y),
                           (block.x + block.w, block.y + block.h), color, 2)
             cv2.putText(out, f"{block.id}:{label}", (block.x, max(14, block.y - 4)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.42, color, 1, cv2.LINE_AA)
         return out
 
-    _block, result = _selected_conditioning(blocks)
+    block, result = _selected_conditioning(blocks)
     if result is None:
-        return np.full((80, 320, 3), 255, dtype=np.uint8)
+        if block is None:
+            block = next((b for b in blocks if getattr(b, "crops", None)), None)
+        if stage in {"conditioning_raw", "conditioning_final"} and block is not None:
+            return _crop_board(block.crops)
+        return _status_board("Baseline: this stage is not applied")
     if stage == "conditioning_raw":
         return result.raw
     if stage == "conditioning_enhanced":

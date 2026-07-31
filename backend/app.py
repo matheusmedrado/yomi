@@ -35,7 +35,9 @@ if __package__ in (None, ""):
     from backend.ocr import MangaOcrService  # type: ignore
     from backend.pipeline import debug as pipeline_debug  # type: ignore
     from backend.pipeline import preprocess, segmentation  # type: ignore
-    from backend.pipeline.detection import detect_blocks, get_detector  # type: ignore
+    from backend.pipeline.detection import (  # type: ignore
+        DEFAULT_DETECTION_MODE, DETECTION_MODES, detect_blocks, get_detector,
+    )
     from backend.kanji import lookup as kanji_lookup  # type: ignore
     from backend.translate import to_portuguese  # type: ignore
     from backend.deck import build_apkg, CardPayload  # type: ignore
@@ -45,7 +47,9 @@ else:
     from .ocr import MangaOcrService
     from .pipeline import debug as pipeline_debug
     from .pipeline import preprocess, segmentation
-    from .pipeline.detection import detect_blocks, get_detector
+    from .pipeline.detection import (
+        DEFAULT_DETECTION_MODE, DETECTION_MODES, detect_blocks, get_detector,
+    )
     from .kanji import lookup as kanji_lookup
     from .translate import to_portuguese
     from .deck import build_apkg, CardPayload
@@ -71,11 +75,11 @@ FRONTEND_DIST = REPO_DIR / "frontend" / "dist"
 _page_img_cache: "OrderedDict[tuple[str, int], np.ndarray]" = OrderedDict()
 _PAGE_IMG_CACHE_MAX = 6
 
-# Regions payload per (session, page).
-_regions_cache: dict[tuple[str, int], dict] = {}
+# Regions payload per (session, page, mode).
+_regions_cache: dict[tuple[str, int, str], dict] = {}
 
-# OCR results per (session, page, region_id).
-_ocr_cache: dict[tuple[str, int, int], dict] = {}
+# OCR results per (session, page, mode, region_id).
+_ocr_cache: dict[tuple[str, int, str, int], dict] = {}
 
 # Encoded thumbnails per (session, page, width).
 _thumb_cache: dict[tuple[str, int, int], bytes] = {}
@@ -112,13 +116,14 @@ def _get_page_image(session_id: str, page: int) -> np.ndarray | None:
     return img
 
 
-def _compute_regions(session_id: str, page: int) -> dict | None:
+def _compute_regions(session_id: str, page: int,
+                     mode: str = DEFAULT_DETECTION_MODE) -> dict | None:
     """Detect text blocks on a page (DL detector + classical post-processing).
 
     Returns a payload dict with `width`, `height` (original image space) and
     `regions` (list of boxes in original image space), or None on error.
     """
-    key = (session_id, page)
+    key = (session_id, page, mode)
     with _cache_lock:
         if key in _regions_cache:
             return _regions_cache[key]
@@ -128,7 +133,7 @@ def _compute_regions(session_id: str, page: int) -> dict | None:
         return None
 
     t0 = time.perf_counter()
-    blocks = detect_blocks(img, device="cpu")
+    blocks = detect_blocks(img, device="cpu", mode=mode)
     dt = (time.perf_counter() - t0) * 1000
 
     payload = {
@@ -143,35 +148,43 @@ def _compute_regions(session_id: str, page: int) -> dict | None:
         # ids; otherwise a later OCR/debug call would invoke the detector a
         # second time and could observe a different ordering.
         _blocks_cache[key] = blocks
-    log.info("regions: page=%s/%s -> %d blocks in %.0fms",
-             session_id, page, len(blocks), dt)
+    log.info("regions: page=%s/%s mode=%s -> %d blocks in %.0fms",
+             session_id, page, mode, len(blocks), dt)
     return payload
 
 
-# Per-(session, page) detected blocks (with OCR-ready crops) so /api/ocr does
+# Per-(session, page, mode) detected blocks (with OCR-ready crops) so /api/ocr does
 # not have to re-run detection. Bounded by the regions LRU via re-population.
-_blocks_cache: dict[tuple[str, int], list] = {}
+_blocks_cache: dict[tuple[str, int, str], list] = {}
 
 
-def _compute_blocks(session_id: str, page: int):
-    key = (session_id, page)
+def _compute_blocks(session_id: str, page: int,
+                    mode: str = DEFAULT_DETECTION_MODE):
+    key = (session_id, page, mode)
     with _cache_lock:
         if key in _blocks_cache:
             return _blocks_cache[key]
     img = _get_page_image(session_id, page)
     if img is None:
         return None
-    blocks = detect_blocks(img, device="cpu")
+    blocks = detect_blocks(img, device="cpu", mode=mode)
     with _cache_lock:
         _blocks_cache[key] = blocks
     return blocks
 
 
-def _find_block(session_id: str, page: int, region_id: int):
-    blocks = _compute_blocks(session_id, page)
+def _find_block(session_id: str, page: int, region_id: int,
+                mode: str = DEFAULT_DETECTION_MODE):
+    blocks = _compute_blocks(session_id, page, mode)
     if blocks is None:
         return None
     return next((b for b in blocks if b.id == region_id), None)
+
+
+def _request_mode(value: object) -> str | None:
+    """Return a supported evaluation mode, or None for invalid input."""
+    mode = DEFAULT_DETECTION_MODE if value is None else value
+    return mode if isinstance(mode, str) and mode in DETECTION_MODES else None
 
 
 # ---------------------------------------------------------------------------
@@ -277,10 +290,13 @@ def register_routes(app: Flask) -> None:
         body = request.get_json(silent=True) or {}
         session_id = body.get("session_id")
         page = body.get("page")
+        mode = _request_mode(body.get("mode"))
         if not isinstance(session_id, str) or not isinstance(page, int):
             return jsonify(
                 {"error": "session_id (str) and page (int) required"}), 400
-        payload = _compute_regions(session_id, page)
+        if mode is None:
+            return jsonify({"error": f"mode must be one of {DETECTION_MODES}"}), 400
+        payload = _compute_regions(session_id, page, mode)
         if payload is None:
             return jsonify({"error": "session/page not found"}), 404
         return jsonify(payload)
@@ -291,18 +307,21 @@ def register_routes(app: Flask) -> None:
         session_id = body.get("session_id")
         page = body.get("page")
         region_id = body.get("region_id")
+        mode = _request_mode(body.get("mode"))
         if not (isinstance(session_id, str)
                 and isinstance(page, int)
                 and isinstance(region_id, int)):
             return jsonify(
                 {"error": "session_id, page, region_id required"}), 400
+        if mode is None:
+            return jsonify({"error": f"mode must be one of {DETECTION_MODES}"}), 400
 
-        ocr_key = (session_id, page, region_id)
+        ocr_key = (session_id, page, mode, region_id)
         with _cache_lock:
             if ocr_key in _ocr_cache:
                 return jsonify(_ocr_cache[ocr_key])
 
-        blocks = _compute_blocks(session_id, page)
+        blocks = _compute_blocks(session_id, page, mode)
         if blocks is None:
             return jsonify({"error": "session/page not found"}), 404
         block = next((b for b in blocks if b.id == region_id), None)
@@ -343,7 +362,10 @@ def register_routes(app: Flask) -> None:
 
     @app.get("/api/region_image/<session_id>/<int:page>/<int:region_id>")
     def api_region_image(session_id: str, page: int, region_id: int) -> Response:
-        block = _find_block(session_id, page, region_id)
+        mode = _request_mode(request.args.get("mode"))
+        if mode is None:
+            return jsonify({"error": f"mode must be one of {DETECTION_MODES}"}), 400
+        block = _find_block(session_id, page, region_id, mode)
         if block is None:
             return jsonify({"error": "region not found"}), 404
         img = _get_page_image(session_id, page)
@@ -370,7 +392,10 @@ def register_routes(app: Flask) -> None:
 
         payloads: list[CardPayload] = []
         for c in cards_data:
-            block = _find_block(session_id, c.get("page", 0), c.get("region_id", 0))
+            mode = _request_mode(c.get("detection_mode"))
+            if mode is None:
+                continue
+            block = _find_block(session_id, c.get("page", 0), c.get("region_id", 0), mode)
             if block is None:
                 continue
             img = _get_page_image(session_id, c.get("page", 0))
@@ -418,10 +443,13 @@ def register_routes(app: Flask) -> None:
                 "error": f"unknown stage {stage!r}",
                 "available": available,
             }), 400
+        mode = _request_mode(request.args.get("mode"))
+        if mode is None:
+            return jsonify({"error": f"mode must be one of {DETECTION_MODES}"}), 400
         try:
             if stage in pipeline_debug.CONDITIONING_STAGES:
                 img = _get_page_image(session_id, page)
-                blocks = _compute_blocks(session_id, page)
+                blocks = _compute_blocks(session_id, page, mode)
                 if img is None or blocks is None:
                     return jsonify({"error": "session/page not found"}), 404
                 stage_img = pipeline_debug.conditioning_stage(stage, img, blocks)
