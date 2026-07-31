@@ -12,9 +12,9 @@ import numpy as np
 def to_grayscale(image: np.ndarray) -> np.ndarray:
     """Converte imagem BGR (ou já cinza) para uint8 de um canal.
 
-    Accepts color (HxWx3) or grayscale (HxW) input. The color space is treated
-    as BGR because that is what `cv2.imread` returns; the conversion uses the
-    standard luminance weights, not just averaging channels.
+    Aceita entrada colorida (HxWx3) ou em escala de cinza (HxW). O espaço de cor
+    é tratado como BGR porque é isso que o `cv2.imread` devolve; a conversão usa
+    os pesos de luminância padrão, não só a média dos canais.
     """
     if image.ndim == 2:
         return image
@@ -28,8 +28,8 @@ def to_grayscale(image: np.ndarray) -> np.ndarray:
 def resize_longest_edge(image: np.ndarray, target: int) -> np.ndarray:
     """Redimensiona para que o lado maior seja `target` (Lab 01).
 
-    Never upscales: if the image is already smaller than `target`, it is
-    returned unchanged. Aspect ratio is preserved.
+    Nunca faz upscale: se a imagem já for menor que `target`, ela é devolvida
+    sem alteração. A proporção é preservada.
     """
     h, w = image.shape[:2]
     longest = max(h, w)
@@ -49,8 +49,8 @@ def clahe_equalize(gray: np.ndarray, clip_limit: float = 2.0,
                    tile_grid: tuple[int, int] = (8, 8)) -> np.ndarray:
     """Aplica CLAHE (equalização adaptativa limitada de histograma).
 
-    Better than global equalization for manga pages where lighting and ink
-    density vary across the page. Output keeps the original dtype/range.
+    Melhor que equalização global pra páginas de mangá onde iluminação e
+    densidade de tinta variam ao longo da página. A saída mantém o dtype/range original.
     """
     if gray.ndim != 2:
         raise ValueError("CLAHE espera imagem em escala de cinza (HxW).")
@@ -66,10 +66,10 @@ def denoise(gray: np.ndarray, method: str = "bilateral",
             ksize: int = 3) -> np.ndarray:
     """Aplica filtro de redução de ruído (Lab 04).
 
-    Supported methods:
-      - "gaussian":  fast, mild smoothing, blurs edges.
-      - "median":    good for salt-and-pepper scan artifacts; preserves edges.
-      - "bilateral": edge-preserving; preferred for manga ink lines.
+    Métodos disponíveis:
+      - "gaussian":  rápido, suavização leve, borra bordas.
+      - "median":    bom pra artefatos de scan tipo sal-e-pimenta; preserva bordas.
+      - "bilateral": preserva bordas; recomendado pra linhas de tinta de mangá.
     """
     if gray.ndim != 2:
         raise ValueError("denoise espera imagem em escala de cinza (HxW).")
@@ -95,12 +95,12 @@ def color_to_text_mask(image: np.ndarray,
                        val_threshold: int = 80) -> np.ndarray:
     """Produz máscara binária com tinta branca sobre fundo preto.
 
-    Strategy (Lab 09):
-      1. Convert BGR → HSV.
-      2. Drop pixels that are highly saturated (painted/colored areas are
-         usually not text in manga).
-      3. Drop pixels that are too bright (paper / white).
-      4. The remainder is the ink mask.
+    Estratégia (Lab 09):
+      1. Converte BGR → HSV.
+      2. Descarta pixels muito saturados (áreas pintadas/coloridas geralmente
+         não são texto em mangá).
+      3. Descarta pixels muito claros (papel / branco).
+      4. O resto é a máscara de tinta.
     """
     if image.ndim == 2:
         # Já está em cinza: preserva os pixels escuros.
@@ -127,14 +127,14 @@ def preprocess_page(image: np.ndarray, target_longest: int = 1600,
                     apply_clahe: bool = True) -> tuple[np.ndarray, np.ndarray]:
     """Executa o pré-processamento completo em uma página de mangá.
 
-    Returns
+    Retorna
     -------
     gray : np.ndarray
-        Grayscale image resized so the longest side equals `target_longest`.
+        Imagem em escala de cinza redimensionada com o lado maior igual a `target_longest`.
     mask : np.ndarray
-        Binary ink mask on the **original** image scale. Keeping the mask at
-        the original resolution makes it easy to map bounding boxes back to
-        pixel coordinates without bookkeeping.
+        Máscara binária de tinta na escala da imagem **original**. Manter a máscara
+        na resolução original facilita mapear as caixas delimitadoras de volta
+        pras coordenadas dos pixels sem ter que ficar convertendo.
     """
     if image.ndim not in (2, 3):
         raise ValueError(f"shape invalido para preprocess_page: {image.shape}")

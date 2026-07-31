@@ -44,9 +44,9 @@ def bbox_iou(a: dict, b: dict) -> float:
 def bbox_match_score(prediction: dict, truth: dict) -> float:
     """Compara uma linha prevista com uma bolha anotada maior de forma justa.
 
-    IoU alone penalizes a correct line crop inside a speech-bubble ground-truth
-    box. Use the greater of IoU and the fraction of the predicted crop covered
-    by the annotation.
+    IoU sozinho penaliza um crop correto de linha dentro de uma caixa de
+    verdade de referência que é o balão inteiro. Usamos o maior entre IoU
+    e a fração do crop previsto coberta pela anotação.
     """
     ax, ay, aw, ah = (int(prediction[k]) for k in ("x", "y", "w", "h"))
     bx, by, bw, bh = (int(truth[k]) for k in ("x", "y", "w", "h"))

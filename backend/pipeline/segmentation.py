@@ -57,12 +57,12 @@ def otsu_threshold(gray_or_mask: np.ndarray,
                    invert: bool | None = None) -> np.ndarray:
     """Limiar automático de Otsu em imagem cinza ou máscara binária.
 
-    If the input is already binary (only 0/255) this is essentially a no-op
-    and the function returns a copy. Otherwise it computes Otsu's threshold
-    and binarizes.
+    Se a entrada já for binária (só 0/255) isso é basicamente um no-op
+    e a função devolve uma cópia. Senão, calcula o limiar de Otsu
+    e binariza.
 
-    `invert=None` chooses automatically: if the input has more bright than
-    dark pixels we flip so that ink is 255 in the output.
+    `invert=None` escolhe automaticamente: se a entrada tiver mais pixels
+    claros que escuros, inverte pra que a tinta seja 255 na saída.
     """
     if gray_or_mask.ndim != 2:
         raise ValueError("otsu_threshold espera imagem 2D.")
@@ -91,9 +91,9 @@ def morphology_cleanup(binary: np.ndarray,
                        close_k: int = 5) -> np.ndarray:
     """Limpa uma máscara binária com abertura e fechamento (Lab 07).
 
-    Opening removes single-pixel noise; closing fills tiny holes inside ink
-    strokes. The kernel sizes are deliberately small to avoid merging nearby
-    text.
+    A abertura remove ruído de pixel único; o fechamento preenche furinhos
+    dentro dos traços de tinta. Os tamanhos dos kernels são pequenos de
+    propósito pra não juntar texto vizinho.
     """
     if binary.ndim != 2:
         raise ValueError("morphology_cleanup espera imagem 2D.")
@@ -114,11 +114,11 @@ def connected_components(binary: np.ndarray, min_area: int = 30,
                          max_aspect: float = 20.0) -> list[TextRegion]:
     """Rotula componentes conectados e retorna os aprovados como TextRegion.
 
-    Filters:
-      - drops anything smaller than `min_area` (Lab 02);
-      - optionally drops anything larger than `max_area`;
-      - drops components with extreme aspect ratios that are almost certainly
-        not text (very thin lines or huge solid blocks).
+    Filtros:
+      - descarta qualquer coisa menor que `min_area` (Lab 02);
+      - opcionalmente descarta qualquer coisa maior que `max_area`;
+      - descarta componentes com proporções extremas que quase certamente
+        não são texto (linhas muito finas ou blocos sólidos enormes).
     """
     if binary.ndim != 2:
         raise ValueError("connected_components espera imagem 2D.")
@@ -158,7 +158,7 @@ def _looks_like_text_blob(region: TextRegion, binary: np.ndarray,
 def watershed_split(binary: np.ndarray, region: TextRegion) -> list[TextRegion]:
     """Aplica transformada de distância e watershed em um componente (Lab 08).
 
-    Returns the original region if watershed could not produce new ones.
+    Devolve a região original se o watershed não conseguir produzir novas.
     """
     x, y, w, h = region.x, region.y, region.w, region.h
     crop = binary[y:y + h, x:x + w]
@@ -210,11 +210,11 @@ def _enclosed_uniform_regions(gray: np.ndarray, bright: bool,
                               ) -> list[TextRegion]:
     """Encontra regiões fechadas de cor uniforme, interiores dos balões.
 
-    A speech bubble is, classically:
-      - a large connected region of near-white (or near-black) pixels,
-      - with a mostly convex, blob-like shape (extent + solidity),
-      - whose interior is *uniformly* that color (this is what separates a
-        bubble from an art mass: art has texture inside, bubbles do not).
+    Um balão de fala é, classicamente:
+      - uma região conexa grande de pixels quase-brancos (ou quase-pretos),
+      - com formato majoritariamente convexo, de bolha (extent + solidity),
+      - cujo interior é *uniformemente* dessa cor (é isso que separa um
+        balão de uma massa de arte: arte tem textura dentro, balões não).
     """
     h_img, w_img = gray.shape[:2]
     page_area = h_img * w_img
@@ -273,10 +273,10 @@ def find_speech_bubbles(gray: np.ndarray,
                         ) -> list[TextRegion]:
     """Detecta balões brancos e pretos, com texto invertido, em uma página.
 
-    Returns bubble-level `TextRegion`s — exactly the granularity manga-ocr
-    was trained on, and exactly what the hover UI wants. Regions detected on
-    dark interiors are flagged `inverted=True` so the OCR stage can invert
-    the crop (white text on black bubble).
+    Retorna `TextRegion`s no nível do balão — exatamente a granularidade com
+    que o manga-ocr foi treinado e exatamente o que a UI de hover precisa.
+    Regiões detectadas em interiores escuros recebem `inverted=True` pra que
+    o estágio de OCR possa inverter o crop (texto branco em balão preto).
     """
     bubbles = _enclosed_uniform_regions(
         gray, bright=True, thresh=white_thresh,
@@ -304,13 +304,13 @@ def cluster_lines(regions: list[TextRegion], gap_factor: float = 0.7,
                   vertical: bool = False) -> list[list[TextRegion]]:
     """Agrupamento guloso de componentes em linhas.
 
-    Components whose y-overlap (for horizontal text) or x-overlap (for
-    vertical text) is large enough are merged into the same line. `gap_factor`
-    is the fraction of the smaller region's height (or width) that must be
-    overlapping for the pair to be grouped.
+    Componentes cuja sobreposição em y (pra texto horizontal) ou em x (pra
+    texto vertical) é grande o suficiente são colocados na mesma linha.
+    `gap_factor` é a fração da altura (ou largura) da região menor que precisa
+    estar sobreposta pro par ser agrupado.
 
-    A line is returned as a list of `TextRegion` objects sorted along the
-    reading direction: left→right for horizontal, top→bottom for vertical.
+    Uma linha é retornada como lista de `TextRegion` ordenada na direção
+    de leitura: esquerda→direita pra horizontal, cima→baixo pra vertical.
     """
     if not regions:
         return []
