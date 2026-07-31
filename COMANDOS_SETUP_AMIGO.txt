@@ -66,6 +66,21 @@ demo_sample_limpo.cbz
 demo_sample_degradado.cbz
 
 
+6.1 Gerar resultados auditados e paineis visuais
+-------------------------------------------------
+
+Este comando executa varios OCRs e pode demorar alguns minutos:
+
+python scripts/evaluate_robustness.py
+
+Devem ser criados:
+
+presentation_artifacts/robustness/results.json
+presentation_artifacts/robustness/evidence_low_contrast.png
+presentation_artifacts/robustness/evidence_gaussian_noise.png
+presentation_artifacts/robustness/evidence_salt_pepper.png
+
+
 7. Instalar e compilar o frontend
 ---------------------------------
 
@@ -121,6 +136,20 @@ cd yomi
 python3.11 -m venv .venv
 source .venv/bin/activate
 
+No Arch Linux, nao use o Python 3.14 do sistema. Use estes comandos no lugar
+dos dois comandos acima:
+
+sudo pacman -S uv
+uv python install 3.11
+uv venv --python 3.11 .venv
+source .venv/bin/activate
+
+Confirme antes de continuar:
+
+python --version
+
+O resultado deve comecar com Python 3.11.
+
 
 3. Instalar as dependencias Python
 ----------------------------------
@@ -147,6 +176,21 @@ python -c "from huggingface_hub import snapshot_download; snapshot_download(repo
 -------------------------------------
 
 python scripts/create_degraded_sample.py
+
+
+6.1 Gerar resultados auditados e paineis visuais
+-------------------------------------------------
+
+Este comando executa varios OCRs e pode demorar alguns minutos:
+
+python scripts/evaluate_robustness.py
+
+Devem ser criados:
+
+presentation_artifacts/robustness/results.json
+presentation_artifacts/robustness/evidence_low_contrast.png
+presentation_artifacts/robustness/evidence_gaussian_noise.png
+presentation_artifacts/robustness/evidence_salt_pepper.png
 
 
 7. Instalar e compilar o frontend
