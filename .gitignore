@@ -3,6 +3,7 @@
 venv/
 __pycache__/
 *.pyc
+.ipynb_checkpoints/
 
 # ----- Local presentation material (real manga pages / CBZ) -----
 backend/data/samples/
@@ -47,6 +48,7 @@ scripts/*
 !scripts/evaluate_conditioning.py
 !scripts/evaluate_robustness.py
 !scripts/create_degraded_sample.py
+!scripts/verify_setup.py
 
 # Generated visual proof for local presentations.
 presentation_artifacts/
@@ -56,3 +58,4 @@ frontend/node_modules/
 frontend/dist/
 frontend/.vite/
 frontend/*.log
+*.tsbuildinfo

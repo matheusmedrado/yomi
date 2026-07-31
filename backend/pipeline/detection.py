@@ -39,9 +39,11 @@ except Exception:  # pragma: no cover
     _HAS_DETECTOR = False
 
 
+_LOCAL_DETECTOR_MODEL = Path(__file__).resolve().parents[2] / "local" / "comictextdetector.pt"
 DEFAULT_MODEL = os.environ.get(
     "COMIC_TEXT_DETECTOR_MODEL",
-    str(Path.home() / ".cache" / "manga-ocr" / "comictextdetector.pt"),
+    str(_LOCAL_DETECTOR_MODEL) if _LOCAL_DETECTOR_MODEL.is_file()
+    else str(Path.home() / ".cache" / "manga-ocr" / "comictextdetector.pt"),
 )
 
 TEXT_HEIGHT = 64

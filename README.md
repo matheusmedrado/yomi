@@ -64,6 +64,9 @@ mangá.
 
 ## Por onde começar
 
+Para instalar o projeto em outro computador e preparar a live demo, siga o
+[guia completo de setup](docs/SETUP_APRESENTACAO.md).
+
 1. Abra [o notebook](notebooks/01_experimento_pdi.ipynb) e execute em ordem.
 2. Leia `backend/pipeline/robustness.py`: são cerca de três degradações e três
    restaurações, sem frontend ou regras de produto.

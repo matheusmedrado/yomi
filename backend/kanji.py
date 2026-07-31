@@ -18,7 +18,11 @@ from urllib.request import urlopen
 log = logging.getLogger(__name__)
 
 KANJIDIC2_URL = "http://www.edrdg.org/kanjidic/kanjidic2.xml.gz"
-CACHE_DIR = Path(os.environ.get("YOMI_CACHE_DIR", Path.home() / ".cache" / "yomi"))
+_LOCAL_CACHE_DIR = Path(__file__).resolve().parent.parent / "local" / "yomi-cache"
+CACHE_DIR = Path(os.environ.get(
+    "YOMI_CACHE_DIR",
+    _LOCAL_CACHE_DIR if _LOCAL_CACHE_DIR.is_dir() else Path.home() / ".cache" / "yomi",
+))
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 XML_PATH = CACHE_DIR / "kanjidic2.xml.gz"
 JSON_PATH = CACHE_DIR / "kanjidic2.json"
