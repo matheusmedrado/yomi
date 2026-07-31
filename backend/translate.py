@@ -1,9 +1,9 @@
-"""Japanese → Portuguese translation via Google Translate free endpoint.
+"""Tradução Japonês → Português via endpoint gratuito do Google Translate.
 
-Uses the undocumented `translate.googleapis.com` GT endpoint (same one used
-by the browser extension). Free, no API key, generous rate limits for
-personal use. Falls back to empty string on any failure so the UI never
-breaks — the translation line is simply hidden.
+Usa o endpoint não documentado `translate.googleapis.com` (o mesmo usado
+pela extensão de navegador). Grátis, sem chave de API, limites generosos pra
+uso pessoal. Em caso de falha retorna string vazia pra UI nunca quebrar —
+a linha de tradução simplesmente some.
 """
 from __future__ import annotations
 

@@ -1,14 +1,14 @@
-"""Yomi — Flask backend.
+"""Yomi — servidor Flask.
 
-Endpoints (all under /api/*; the rest serves the React build when present):
-  POST /api/load                  upload a CBZ, returns session_id + page count
-  GET  /api/page/<sid>/<n>       page image (optional ?w=200 thumbnail)
-  POST /api/regions               run the PDI pipeline on page n, return boxes
-  POST /api/ocr                   run manga-ocr + reading + analysis on a region
-  GET  /api/region_image/<sid>/<page>/<rid>  bubble crop image (JPEG)
-  POST /api/deck/export           build Anki .apkg from posted cards
-  GET  /api/debug/<stage>/<sid>/<n>  intermediate stage image
-  GET  /api/health                 liveness probe
+Endpoints (tudo em /api/*; o resto serve o build do React quando disponível):
+  POST /api/load                  envia um CBZ, devolve session_id + número de páginas
+  GET  /api/page/<sid>/<n>       imagem da página (aceita ?w=200 pra thumbnail)
+  POST /api/regions               roda o pipeline PDI na página n, retorna caixas
+  POST /api/ocr                   roda manga-ocr + leitura + análise em uma região
+  GET  /api/region_image/<sid>/<page>/<rid>  crop do balão (JPEG)
+  POST /api/deck/export           gera .apkg do Anki com os cards enviados
+  GET  /api/debug/<stage>/<sid>/<n>  imagem de estágio intermediário do pipeline
+  GET  /api/health                 probe de saúde do servidor
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ import numpy as np
 from flask import Flask, Response, jsonify, request, send_from_directory
 from flask_cors import CORS
 
-# Allow `python backend/app.py` to find sibling modules without a real package.
+# Permite rodar com `python backend/app.py` encontrando os módulos irmãos sem precisar de um pacote.
 import sys as _sys
 if __package__ in (None, ""):
     _sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -57,7 +57,7 @@ else:
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Paths
+# Caminhos
 # ---------------------------------------------------------------------------
 
 BACKEND_DIR = Path(__file__).resolve().parent
@@ -68,33 +68,33 @@ SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
 FRONTEND_DIST = REPO_DIR / "frontend" / "dist"
 
 # ---------------------------------------------------------------------------
-# Caches (in-memory; per-session ids are unique so collisions are impossible)
+# Caches (em memória; ids de sessão são únicos, então colisão é impossível)
 # ---------------------------------------------------------------------------
 
-# Decoded pages, LRU-bounded (full-res pages are big).
+# Páginas decodificadas, limitadas por LRU (páginas em resolução cheia são pesadas).
 _page_img_cache: "OrderedDict[tuple[str, int], np.ndarray]" = OrderedDict()
 _PAGE_IMG_CACHE_MAX = 6
 
-# Regions payload per (session, page, mode).
+# Payload de regiões por (session, page, mode).
 _regions_cache: dict[tuple[str, int, str], dict] = {}
 
-# OCR results per (session, page, mode, region_id).
+# Resultados de OCR por (session, page, mode, region_id).
 _ocr_cache: dict[tuple[str, int, str, int], dict] = {}
 
-# Encoded thumbnails per (session, page, width).
+# Thumbnails codificadas por (session, page, width).
 _thumb_cache: dict[tuple[str, int, int], bytes] = {}
 
-# Guards the caches above (Flask runs threaded).
+# Protege os caches acima (Flask roda com threads).
 _cache_lock = threading.Lock()
 
-# Segmentation tuning for the classical fallback path.
+# Ajustes de segmentação pro caminho clássico (fallback).
 SEG_MIN_AREA = 120
 SEG_MIN_FILL = 0.12
 SEG_MAX_FILL = 0.85
 
 
 # ---------------------------------------------------------------------------
-# Shared computation (used by both /api/regions and /api/ocr)
+# Cálculo compartilhado (usado tanto por /api/regions quanto por /api/ocr)
 # ---------------------------------------------------------------------------
 
 def _get_page_image(session_id: str, page: int) -> np.ndarray | None:
@@ -118,10 +118,10 @@ def _get_page_image(session_id: str, page: int) -> np.ndarray | None:
 
 def _compute_regions(session_id: str, page: int,
                      mode: str = DEFAULT_DETECTION_MODE) -> dict | None:
-    """Detect text blocks on a page (DL detector + classical post-processing).
+    """Detecta blocos de texto em uma página (detector DL + pós-processamento clássico).
 
-    Returns a payload dict with `width`, `height` (original image space) and
-    `regions` (list of boxes in original image space), or None on error.
+    Retorna um payload com `width`, `height` (espaço da imagem original) e
+    `regions` (lista de caixas no espaço da imagem original), ou None em caso de erro.
     """
     key = (session_id, page, mode)
     with _cache_lock:
@@ -144,17 +144,17 @@ def _compute_regions(session_id: str, page: int,
     }
     with _cache_lock:
         _regions_cache[key] = payload
-        # Keep the exact conditioned crops that produced these stable region
-        # ids; otherwise a later OCR/debug call would invoke the detector a
-        # second time and could observe a different ordering.
+        # Mantém os crops condicionados exatos que geraram esses ids de região
+        # estáveis; senão uma chamada posterior de OCR/debug rodaria o detector
+        # de novo e poderia ver uma ordenação diferente.
         _blocks_cache[key] = blocks
     log.info("regions: page=%s/%s mode=%s -> %d blocks in %.0fms",
              session_id, page, mode, len(blocks), dt)
     return payload
 
 
-# Per-(session, page, mode) detected blocks (with OCR-ready crops) so /api/ocr does
-# not have to re-run detection. Bounded by the regions LRU via re-population.
+# Blocos detectados por (session, page, mode) já com crops prontos pra OCR,
+# pra /api/ocr não precisar rodar detecção de novo. Limitado pelo LRU das regiões.
 _blocks_cache: dict[tuple[str, int, str], list] = {}
 
 
@@ -182,13 +182,13 @@ def _find_block(session_id: str, page: int, region_id: int,
 
 
 def _request_mode(value: object) -> str | None:
-    """Return a supported evaluation mode, or None for invalid input."""
+    """Retorna um modo de avaliação válido, ou None se a entrada for inválida."""
     mode = DEFAULT_DETECTION_MODE if value is None else value
     return mode if isinstance(mode, str) and mode in DETECTION_MODES else None
 
 
 # ---------------------------------------------------------------------------
-# App factory
+# Fábrica do app
 # ---------------------------------------------------------------------------
 
 def create_app() -> Flask:
@@ -206,7 +206,7 @@ def create_app() -> Flask:
 
 
 # ---------------------------------------------------------------------------
-# API routes
+# Rotas da API
 # ---------------------------------------------------------------------------
 
 def register_routes(app: Flask) -> None:
@@ -235,8 +235,8 @@ def register_routes(app: Flask) -> None:
         if not vol.page_files:
             return jsonify({"error": "no images found in archive"}), 400
 
-        # Warm the OCR model (and the text detector) in the background so the
-        # first hover is fast.
+        # Esquenta o modelo de OCR (e o detector de texto) em background
+        # pra o primeiro hover já ser rápido.
         def _warm() -> None:
             MangaOcrService.instance().warm_up()
             try:
@@ -465,7 +465,7 @@ def register_routes(app: Flask) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Static (frontend build) — fallback message when the build is missing
+# Servir arquivos estáticos (build do frontend) — mensagem de fallback se o build não existir
 # ---------------------------------------------------------------------------
 
 def register_static(app: Flask) -> None:
@@ -495,7 +495,7 @@ def register_static(app: Flask) -> None:
 # ---------------------------------------------------------------------------
 
 def _session_pages(session_id: str) -> list[Path]:
-    """Return the list of page files for a session, in natural order."""
+    """Retorna a lista de arquivos de página de uma sessão, em ordem natural."""
     if not session_id or "/" in session_id or ".." in session_id:
         return []
     return cbz.list_pages(SESSIONS_DIR / session_id)
@@ -505,8 +505,8 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    # Port 5001: macOS AirPlay Receiver (ControlCenter) occupies *:5000 and
-    # Safari resolves `localhost` via IPv6 ::1, which lands on AirPlay, not on
-    # this server. 5001 avoids the whole mess.
+    # Porta 5001: o macOS AirPlay Receiver (ControlCenter) ocupa *:5000 e
+    # o Safari resolve `localhost` via IPv6 ::1, que cai no AirPlay, e não
+    # neste servidor. A 5001 evita essa confusão toda.
     port = int(os.environ.get("YOMI_PORT", "5001"))
     app.run(host="127.0.0.1", port=port, debug=False, threaded=True)

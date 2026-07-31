@@ -1,9 +1,9 @@
-"""CBZ/zip extraction.
+"""Extração de CBZ/zip.
 
-A manga CBZ is just a zip archive of page images, sorted in the natural
-reading order (page-001, page-002, ...). We accept .cbz and .zip uploads,
-sort entries by their natural name, and write them as individual files
-inside a per-session directory.
+Um CBZ de mangá é só um zip com imagens das páginas, organizadas na ordem
+natural de leitura (pag-001, pag-002, ...). Aceitamos uploads .cbz e .zip,
+ordenamos as entradas pelo nome natural e salvamos cada imagem como arquivo
+individual dentro de uma pasta por sessão.
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"}
 
 
 def _natural_key(name: str) -> list:
-    """Sort key that understands `page_2 < page_10` instead of `page_10 < page_2`."""
+    """Chave de ordenação que entende `pag_2 < pag_10` em vez de `pag_10 < pag_2`."""
     return [int(s) if s.isdigit() else s.lower() for s in re.split(r"(\d+)", name)]
 
 
@@ -32,17 +32,17 @@ class ExtractedVolume:
 
 
 def _safe_session_id(raw: str) -> str:
-    # hex / uuid-ish only; cap length
+    # só hex / uuid; limita o tamanho
     cleaned = re.sub(r"[^a-zA-Z0-9_-]", "", raw)[:48]
     return cleaned or "session"
 
 
 def extract_cbz(zip_bytes: bytes, session_id: str,
                  sessions_root: Path) -> ExtractedVolume:
-    """Extract a CBZ/zip from raw bytes into a per-session directory.
+    """Extrai um CBZ/zip a partir de bytes brutos pra uma pasta de sessão.
 
-    The function is intentionally permissive: it skips non-image entries,
-    folders, and hidden files. Order is natural by filename.
+    A função é intencionalmente permissiva: ignora entradas que não são imagem,
+    pastas e arquivos ocultos. A ordem é natural por nome de arquivo.
     """
     session_id = _safe_session_id(session_id)
     pages_dir = sessions_root / session_id
@@ -51,7 +51,7 @@ def extract_cbz(zip_bytes: bytes, session_id: str,
     pages_dir.mkdir(parents=True, exist_ok=True)
 
     page_files: list[Path] = []
-    # Write through a temp file because zipfile needs a seekable stream.
+    # Escreve num arquivo temporário porque zipfile precisa de um stream com seek.
     tmp_path = pages_dir / "_upload.tmp"
     tmp_path.write_bytes(zip_bytes)
 
@@ -85,7 +85,7 @@ def extract_cbz(zip_bytes: bytes, session_id: str,
 
 
 def list_pages(pages_dir: Path) -> list[Path]:
-    """Return image files in a pages dir sorted in natural order."""
+    """Retorna os arquivos de imagem de uma pasta de páginas, em ordem natural."""
     if not pages_dir.is_dir():
         return []
     files: Iterable[Path] = (

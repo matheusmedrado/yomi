@@ -1,14 +1,14 @@
-"""manga-ocr wrapper.
+"""Wrapper do manga-ocr.
 
-The model is loaded **lazily on first use** so the rest of the app stays
-responsive even if the user's first hover comes in cold. We also keep the
-input pipeline deliberately simple: a tight BGR crop → BGR→RGB → PIL → model.
-A small padding around the crop helps the recognizer with bubble edges.
+O modelo é carregado **sob demanda no primeiro uso** pra que o resto do app
+fique responsivo mesmo se o primeiro hover vier a frio. Mantemos o pipeline
+de entrada simples: um crop BGR apertado → BGR→RGB → PIL → modelo.
+Uma borda pequena ao redor do crop ajuda o reconhecedor com as beiradas do balão.
 
-If `manga-ocr` is not installed (e.g. during the part of development where we
-just want the classical pipeline running), `MangaOcrService.recognize` returns
-an empty string and logs once. This is what lets the rest of the project
-keep working without the heavy DL dependency.
+Se o `manga-ocr` não estiver instalado (ex.: durante a parte do desenvolvimento
+em que só queremos o pipeline clássico rodando), `MangaOcrService.recognize`
+devolve string vazia e loga uma vez. É isso que permite o resto do projeto
+funcionar sem a dependência pesada de DL.
 """
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ DEFAULT_MODEL_SOURCE = os.environ.get(
 
 
 class MangaOcrService:
-    """Lazy singleton around `MangaOcr`."""
+    """Singleton preguiçoso do `MangaOcr`."""
 
     _instance: Optional["MangaOcrService"] = None
     _lock = threading.Lock()
@@ -42,8 +42,8 @@ class MangaOcrService:
         self._mocr = None
         self._tried_load = False
         self._available: bool | None = None
-        # Serializes inference — concurrent PyTorch/MPS calls from Flask's
-        # threaded server can crash or corrupt results.
+        # Serializa a inferência — chamadas concorrentes PyTorch/MPS do servidor
+        # com threads do Flask podem crashar ou corromper os resultados.
         self._infer_lock = threading.Lock()
 
     @classmethod
@@ -53,10 +53,10 @@ class MangaOcrService:
                 cls._instance = cls()
             return cls._instance
 
-    # ---- public API -----------------------------------------------------
+    # ---- API pública -----------------------------------------------------
 
     def warm_up(self) -> bool:
-        """Load the model eagerly. Returns True if it loaded successfully."""
+        """Carrega o modelo de forma adiantada. Retorna True se carregou com sucesso."""
         self._ensure_loaded()
         return self._available is True
 
@@ -66,10 +66,10 @@ class MangaOcrService:
         return self._available is True
 
     def recognize(self, crop_bgr: np.ndarray, padding: int = 12) -> str:
-        """Recognize the Japanese text in a tight crop of a speech bubble.
+        """Reconhece o texto em japonês num crop apertado de um balão de fala.
 
-        `crop_bgr` is an OpenCV-style BGR image. A small white padding is
-        added so the model does not see ink touching the edges.
+        `crop_bgr` é uma imagem BGR no padrão do OpenCV. Uma borda branca pequena
+        é adicionada pra o modelo não ver tinta encostando nas beiradas.
         """
         if crop_bgr is None or crop_bgr.size == 0:
             return ""
@@ -98,7 +98,7 @@ class MangaOcrService:
                  dt, crop_bgr.shape[1], crop_bgr.shape[0], (text or "")[:60])
         return (text or "").strip()
 
-    # ---- internals ------------------------------------------------------
+    # ---- internos --------------------------------------------------------
 
     def _ensure_loaded(self) -> None:
         if self._available is not None:
@@ -117,11 +117,11 @@ class MangaOcrService:
                 self._available = False
                 return
             try:
-                # A local model directory makes OCR and benchmark CER work
-                # offline after the one-time Hugging Face download.
+                # Uma pasta de modelo local permite que OCR e benchmark CER
+                # funcionem offline depois do download único do Hugging Face.
                 self._mocr = MangaOcr(pretrained_model_name_or_path=DEFAULT_MODEL_SOURCE)
                 self._available = True
-                log.info("manga-ocr loaded successfully.")
+                log.info("manga-ocr carregado com sucesso.")
             except Exception as e:  # noqa: BLE001
                 log.exception("Failed to initialize manga-ocr: %s", e)
                 self._available = False
