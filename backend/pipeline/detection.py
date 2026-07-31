@@ -1,4 +1,4 @@
-"""Text localization and crop preparation."""
+"""Localização de texto e preparação de recortes."""
 from __future__ import annotations
 
 import os
@@ -15,14 +15,12 @@ from .pdi_localization import localize_page, localize_roi
 
 log = logging.getLogger(__name__)
 
-# comic-text-detector is a heavy DL dependency; import lazily so the rest of
-# the backend (e.g. unit tests on the classical segmentation) does not require
-# torch to be importable.
+# comic-text-detector é uma dependência pesada de aprendizado profundo;
+# a importação tardia evita exigir o torch no restante do backend.
 try:  # pragma: no cover - import guard
     import sys
-    # The vendored detector uses legacy absolute imports (``basemodel``) as
-    # well as package imports (``comic_text_detector.inference``), so both
-    # its package parent and its own directory must be importable.
+    # O detector incorporado usa importações absolutas antigas e de pacote;
+    # por isso o diretório pai e o próprio diretório precisam estar no caminho.
     _ctd_root = Path(__file__).resolve().parent.parent
     for _ctd_path in (str(_ctd_root), str(_ctd_root / "comic_text_detector")):
         if _ctd_path not in sys.path:
@@ -56,7 +54,7 @@ HYBRID_RELOCALIZE_LINES = os.environ.get("YOMI_HYBRID_RELOCALIZE_LINES", "0") ==
 
 @dataclass
 class DetectedBlock:
-    """A detected text block in original image coordinates."""
+    """Bloco de texto detectado nas coordenadas da imagem original."""
     id: int
     x: int
     y: int
@@ -93,7 +91,7 @@ class DetectedBlock:
 
 
 class _Detector:
-    """Thin singleton wrapper around comic-text-detector's TextDetector."""
+    """Adaptador singleton simples para o TextDetector."""
 
     def __init__(self, model_path: str = DEFAULT_MODEL, device: str = "cpu") -> None:
         if not _HAS_DETECTOR:
@@ -119,7 +117,7 @@ class _Detector:
         return self._det
 
     def detect(self, img: np.ndarray):
-        """Run the detector and return ``(mask, mask_refined, blk_list)``."""
+        """Executa o detector e retorna ``(mask, mask_refined, blk_list)``."""
         return self._ensure()(img, refine_mode=REFINEMASK_INPAINT,
                               keep_undetected_mask=True)
 
@@ -171,10 +169,10 @@ def detect_blocks(img: np.ndarray,
                   detector: Optional[_Detector] = None,
                   device: str = "cpu",
                   mode: str | None = None) -> List[DetectedBlock]:
-    """Detect text blocks on a full-resolution BGR page.
+    """Detecta blocos de texto em uma página BGR em resolução original.
 
-    Returns a list of ``DetectedBlock`` in rough manga reading order
-    (top→bottom, right→left). Blocks carry OCR-ready crops.
+    Retorna ``DetectedBlock`` em ordem aproximada de leitura de mangá
+    (cima→baixo, direita→esquerda), com recortes prontos para OCR.
     """
     mode = mode or DEFAULT_DETECTION_MODE
     if mode not in DETECTION_MODES:
@@ -227,6 +225,6 @@ def detect_blocks(img: np.ndarray,
         out.append(block)
         next_id += 1
 
-    # Rough reading order: top-to-bottom; right-to-left for vertical-first.
+    # Ordem aproximada: cima para baixo e direita para esquerda.
     out.sort(key=lambda b: (b.y, -b.x))
     return out

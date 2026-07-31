@@ -1,4 +1,4 @@
-"""Sampling, contrast, low-pass filtering and color masking."""
+"""Amostragem, contraste, filtragem passa-baixa e máscara de cor."""
 from __future__ import annotations
 
 import cv2
@@ -6,11 +6,11 @@ import numpy as np
 
 
 # ---------------------------------------------------------------------------
-# Lab 00 — sampling
+# Lab 00 — amostragem
 # ---------------------------------------------------------------------------
 
 def to_grayscale(image: np.ndarray) -> np.ndarray:
-    """Convert BGR (or already-gray) image to single-channel uint8.
+    """Converte imagem BGR (ou já cinza) para uint8 de um canal.
 
     Accepts color (HxWx3) or grayscale (HxW) input. The color space is treated
     as BGR because that is what `cv2.imread` returns; the conversion uses the
@@ -26,7 +26,7 @@ def to_grayscale(image: np.ndarray) -> np.ndarray:
 
 
 def resize_longest_edge(image: np.ndarray, target: int) -> np.ndarray:
-    """Resize so that the longest side equals `target` (Lab 01).
+    """Redimensiona para que o lado maior seja `target` (Lab 01).
 
     Never upscales: if the image is already smaller than `target`, it is
     returned unchanged. Aspect ratio is preserved.
@@ -42,12 +42,12 @@ def resize_longest_edge(image: np.ndarray, target: int) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
-# Lab 03 — contrast
+# Lab 03 — contraste
 # ---------------------------------------------------------------------------
 
 def clahe_equalize(gray: np.ndarray, clip_limit: float = 2.0,
                    tile_grid: tuple[int, int] = (8, 8)) -> np.ndarray:
-    """Apply CLAHE (Contrast-Limited Adaptive Histogram Equalization).
+    """Aplica CLAHE (equalização adaptativa limitada de histograma).
 
     Better than global equalization for manga pages where lighting and ink
     density vary across the page. Output keeps the original dtype/range.
@@ -59,12 +59,12 @@ def clahe_equalize(gray: np.ndarray, clip_limit: float = 2.0,
 
 
 # ---------------------------------------------------------------------------
-# Lab 04 — low-pass filtering
+# Lab 04 — filtragem passa-baixa
 # ---------------------------------------------------------------------------
 
 def denoise(gray: np.ndarray, method: str = "bilateral",
             ksize: int = 3) -> np.ndarray:
-    """Apply a noise-suppression filter (Lab 04).
+    """Aplica filtro de redução de ruído (Lab 04).
 
     Supported methods:
       - "gaussian":  fast, mild smoothing, blurs edges.
@@ -80,20 +80,20 @@ def denoise(gray: np.ndarray, method: str = "bilateral",
         k = max(3, ksize | 1)  # odd
         return cv2.medianBlur(gray, k)
     if method == "bilateral":
-        # d=ksize*2 is the typical default; tune to taste.
+        # d=ksize*2 é um valor usual para o diâmetro do filtro.
         return cv2.bilateralFilter(gray, d=max(3, ksize * 2),
                                    sigmaColor=75, sigmaSpace=75)
     raise ValueError(f"metodo de denoise desconhecido: {method!r}")
 
 
 # ---------------------------------------------------------------------------
-# Lab 09 — color handling: ink vs. paper mask
+# Lab 09 — tratamento de cor: máscara de tinta e papel
 # ---------------------------------------------------------------------------
 
 def color_to_text_mask(image: np.ndarray,
                        sat_threshold: int = 60,
                        val_threshold: int = 80) -> np.ndarray:
-    """Produce a binary mask where ink is white on a black background.
+    """Produz máscara binária com tinta branca sobre fundo preto.
 
     Strategy (Lab 09):
       1. Convert BGR → HSV.
@@ -103,7 +103,7 @@ def color_to_text_mask(image: np.ndarray,
       4. The remainder is the ink mask.
     """
     if image.ndim == 2:
-        # Already gray — keep dark pixels.
+        # Já está em cinza: preserva os pixels escuros.
         mask = (image < val_threshold).astype(np.uint8) * 255
         return mask
     if image.ndim != 3 or image.shape[2] not in (3, 4):
@@ -113,19 +113,19 @@ def color_to_text_mask(image: np.ndarray,
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     sat = hsv[:, :, 1]
     val = hsv[:, :, 2]
-    # Ink: low saturation (mostly black on white) and dark (low value).
+    # Tinta: baixa saturação e baixa intensidade.
     ink = ((sat < sat_threshold) & (val < val_threshold)).astype(np.uint8) * 255
     return ink
 
 
 # ---------------------------------------------------------------------------
-# Top-level: full page pre-processing
+# Nível principal: pré-processamento da página inteira
 # ---------------------------------------------------------------------------
 
 def preprocess_page(image: np.ndarray, target_longest: int = 1600,
                     denoise_method: str = "bilateral",
                     apply_clahe: bool = True) -> tuple[np.ndarray, np.ndarray]:
-    """Run the full pre-processing pipeline on a single manga page.
+    """Executa o pré-processamento completo em uma página de mangá.
 
     Returns
     -------

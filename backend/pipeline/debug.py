@@ -1,4 +1,4 @@
-"""Pipeline debug visualizations."""
+"""Visualizações de depuração do pipeline."""
 from __future__ import annotations
 
 import cv2
@@ -104,7 +104,7 @@ def _status_board(message: str) -> np.ndarray:
 
 
 def _crop_board(crops: list[np.ndarray]) -> np.ndarray:
-    """Put split final OCR crops on one readable debug board."""
+    """Reúne os recortes finais do OCR em um painel legível."""
     if not crops:
         return np.full((80, 240, 3), 255, dtype=np.uint8)
     height = max(1, max(c.shape[0] for c in crops))
@@ -120,7 +120,7 @@ def _crop_board(crops: list[np.ndarray]) -> np.ndarray:
 
 
 def conditioning_stage(stage: str, page_bgr: np.ndarray, blocks) -> np.ndarray:
-    """Render classical crop evidence or a page-level conditioning overlay."""
+    """Renderiza evidências dos recortes ou a sobreposição da página."""
     if stage not in CONDITIONING_STAGES:
         raise ValueError(f"unknown conditioning stage: {stage}")
     if stage == "conditioning_overlay":
@@ -148,7 +148,7 @@ def conditioning_stage(stage: str, page_bgr: np.ndarray, blocks) -> np.ndarray:
             block = next((b for b in blocks if getattr(b, "crops", None)), None)
         if stage in {"conditioning_raw", "conditioning_final"} and block is not None:
             return _crop_board(block.crops)
-        return _status_board("Baseline: this stage is not applied")
+        return _status_board("Baseline: esta etapa não é aplicada")
     if stage == "conditioning_raw":
         return result.raw
     if stage == "conditioning_enhanced":

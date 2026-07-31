@@ -1,4 +1,4 @@
-"""Edge-detection stage (Lab 05).
+"""Etapa de detecção de bordas (Lab 05).
 
 Provides the three classical edge operators that show up in the course:
 Sobel (gradient magnitude), Laplacian (second-order derivative) and Canny
@@ -12,7 +12,7 @@ import numpy as np
 
 
 def sobel(gray: np.ndarray, ksize: int = 3) -> np.ndarray:
-    """Sobel gradient magnitude, normalized to uint8."""
+    """Magnitude do gradiente Sobel, normalizada para uint8."""
     if gray.ndim != 2:
         raise ValueError("sobel espera imagem em escala de cinza (HxW).")
     gx = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=ksize)
@@ -23,7 +23,7 @@ def sobel(gray: np.ndarray, ksize: int = 3) -> np.ndarray:
 
 
 def laplacian(gray: np.ndarray, ksize: int = 3) -> np.ndarray:
-    """Laplacian (second-order) edges, normalized to uint8."""
+    """Bordas por Laplaciano (segunda ordem), normalizadas para uint8."""
     if gray.ndim != 2:
         raise ValueError("laplacian espera imagem em escala de cinza (HxW).")
     lap = cv2.Laplacian(gray, cv2.CV_32F, ksize=ksize)
@@ -32,7 +32,7 @@ def laplacian(gray: np.ndarray, ksize: int = 3) -> np.ndarray:
 
 
 def canny(gray: np.ndarray, low: int = 50, high: int = 150) -> np.ndarray:
-    """Canny edges. Output is binary (only 0/255 values)."""
+    """Bordas de Canny. A saída é binária (somente 0 e 255)."""
     if gray.ndim != 2:
         raise ValueError("canny espera imagem em escala de cinza (HxW).")
     return cv2.Canny(gray, low, high)

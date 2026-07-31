@@ -1,4 +1,4 @@
-"""Ground-truth matching and Japanese OCR metrics."""
+"""Associação com verdade de referência e métricas de OCR japonês."""
 from __future__ import annotations
 
 import re
@@ -8,13 +8,13 @@ from typing import Iterable
 
 
 def normalize_text(text: str) -> str:
-    """Remove layout whitespace while preserving Japanese punctuation/SFX."""
+    """Remove espaços de leiaute preservando pontuação e efeitos sonoros."""
     text = unicodedata.normalize("NFKC", text or "")
     return re.sub(r"\s+", "", text)
 
 
 def character_error_rate(reference: str, hypothesis: str) -> float:
-    """Levenshtein distance divided by reference character count."""
+    """Distância de Levenshtein dividida pelo total de caracteres de referência."""
     ref, hyp = normalize_text(reference), normalize_text(hypothesis)
     if not ref:
         return 0.0 if not hyp else 1.0
@@ -42,7 +42,7 @@ def bbox_iou(a: dict, b: dict) -> float:
 
 
 def bbox_match_score(prediction: dict, truth: dict) -> float:
-    """Match a text-line prediction to a larger annotated bubble fairly.
+    """Compara uma linha prevista com uma bolha anotada maior de forma justa.
 
     IoU alone penalizes a correct line crop inside a speech-bubble ground-truth
     box. Use the greater of IoU and the fraction of the predicted crop covered
@@ -66,7 +66,7 @@ class RegionMetric:
 
 def evaluate_regions(predictions: Iterable[dict], truth: Iterable[dict],
                      iou_threshold: float = 0.10) -> list[RegionMetric]:
-    """Greedily associate each transcript box with at most one prediction."""
+    """Associa cada caixa transcrita a no máximo uma predição, de forma gulosa."""
     predictions = list(predictions)
     used: set[int] = set()
     metrics: list[RegionMetric] = []

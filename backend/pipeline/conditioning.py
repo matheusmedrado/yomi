@@ -1,4 +1,4 @@
-"""PDI conditioning for OCR crops."""
+"""Condicionamento PDI dos recortes enviados ao OCR."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -15,7 +15,7 @@ DEFAULT_MAX_RATIO = 8.0
 
 @dataclass
 class ConditioningResult:
-    """Inspectable result of conditioning one horizontalized detector crop."""
+    """Resultado inspecionável do condicionamento de um recorte horizontal."""
 
     crops: List[np.ndarray]
     raw: np.ndarray
@@ -37,7 +37,7 @@ def _as_bgr(gray: np.ndarray) -> np.ndarray:
 
 
 def normalize_crop(crop_bgr: np.ndarray) -> np.ndarray:
-    """Apply grayscale conversion, CLAHE and bilateral filtering."""
+    """Aplica tons de cinza, CLAHE e filtro bilateral."""
     if crop_bgr is None or crop_bgr.size == 0:
         raise ValueError("empty detector crop")
     gray = to_grayscale(crop_bgr)
@@ -47,9 +47,9 @@ def normalize_crop(crop_bgr: np.ndarray) -> np.ndarray:
 
 
 def _ink_mask(enhanced: np.ndarray) -> np.ndarray:
-    """Otsu threshold with automatic dark- or light-ink polarity.
+    """Limiar de Otsu com polaridade automática para tinta clara ou escura.
 
-    Chooses the sparse Otsu class as ink.
+    Escolhe como tinta a classe mais esparsa produzida por Otsu.
     """
     _, dark_ink = cv2.threshold(
         enhanced, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
@@ -67,14 +67,14 @@ def _ink_mask(enhanced: np.ndarray) -> np.ndarray:
 
 
 def _clean_mask(mask: np.ndarray) -> np.ndarray:
-    """Opening removes isolated pixels; closing repairs tiny stroke gaps."""
+    """A abertura remove pixels isolados e o fechamento une pequenas falhas."""
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
     out = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
     return cv2.morphologyEx(out, cv2.MORPH_CLOSE, kernel)
 
 
 def _component_geometry(mask: np.ndarray) -> tuple[bool, tuple[int, int, int, int] | None, np.ndarray]:
-    """Validate ink coverage and derive one union bounding box from CC stats."""
+    """Valida a cobertura de tinta e obtém uma caixa unida pelos CCs."""
     h, w = mask.shape
     coverage = float(np.count_nonzero(mask)) / max(1, mask.size)
     overlay = _as_bgr(mask)
@@ -120,7 +120,7 @@ def _smooth_profile(mask: np.ndarray) -> np.ndarray:
 
 def _split_at_low_ink_gaps(image: np.ndarray, mask: np.ndarray,
                            max_ratio: float) -> tuple[List[np.ndarray], List[int], np.ndarray]:
-    """Split overlong horizontalized crops at Gaussian-smoothed ink minima."""
+    """Divide recortes horizontais longos nos mínimos de tinta suavizados."""
     h, w = image.shape[:2]
     profile = _smooth_profile(mask)
     cuts: list[int] = []
@@ -150,9 +150,9 @@ def _split_at_low_ink_gaps(image: np.ndarray, mask: np.ndarray,
 
 
 def condition_crop(crop_bgr: np.ndarray, max_ratio: float = DEFAULT_MAX_RATIO) -> ConditioningResult:
-    """Condition one detector line crop.
+    """Condiciona o recorte de uma linha fornecido pelo detector.
 
-    Weak masks return the normalized crop.
+    Máscaras fracas retornam o recorte normalizado.
     """
     enhanced = normalize_crop(crop_bgr)
     mask = _clean_mask(_ink_mask(enhanced))
@@ -179,7 +179,7 @@ def condition_crop(crop_bgr: np.ndarray, max_ratio: float = DEFAULT_MAX_RATIO) -
 
 
 def raw_fallback(crop_bgr: np.ndarray, reason: str = "raw_fallback") -> ConditioningResult:
-    """Build debug data for the only raw-pixel recovery path."""
+    """Monta dados de depuração para a única recuperação com pixels crus."""
     if crop_bgr is None or crop_bgr.size == 0:
         raise ValueError("empty detector crop")
     gray = to_grayscale(crop_bgr)

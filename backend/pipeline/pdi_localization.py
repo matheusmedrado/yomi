@@ -1,4 +1,4 @@
-"""Classical text-region proposals for PDI-only mode."""
+"""Propostas clássicas de regiões de texto para o modo PDI-only."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -13,7 +13,7 @@ from .segmentation import TextRegion, cluster_lines, find_speech_bubbles
 
 @dataclass
 class PdiLine:
-    """A line candidate in original page coordinates."""
+    """Linha candidata nas coordenadas originais da página."""
 
     x: int
     y: int
@@ -25,7 +25,7 @@ class PdiLine:
 
 @dataclass
 class PdiRegion:
-    """A region containing one or more line candidates."""
+    """Região que contém uma ou mais linhas candidatas."""
 
     x: int
     y: int
@@ -38,9 +38,9 @@ class PdiRegion:
 
 def rlsa(mask: np.ndarray, horizontal_gap: int = 11,
          vertical_gap: int = 11) -> np.ndarray:
-    """Run-length-smoothing approximation using directional closing.
+    """Aproximação de RLSA usando fechamento direcional.
 
-    Closing connects foreground runs separated by short gaps.
+    O fechamento conecta trechos de primeiro plano separados por lacunas curtas.
     """
     if mask.ndim != 2:
         raise ValueError("RLSA expects a 2D binary mask")
@@ -69,7 +69,7 @@ def _union(regions: Iterable[TextRegion]) -> tuple[int, int, int, int] | None:
 
 
 def _component_lines(mask: np.ndarray, vertical: bool) -> list[tuple[int, int, int, int]]:
-    """Find CCs and group them into lines using directional RLSA + overlap."""
+    """Encontra CCs e os agrupa em linhas com RLSA e sobreposição."""
     h, w = mask.shape
     scale = max(3, int(round(min(h, w) * 0.018)))
     smoothed = rlsa(
@@ -128,7 +128,7 @@ def _line_from_box(page: np.ndarray, box: tuple[int, int, int, int],
 
 def localize_roi(page: np.ndarray, roi: tuple[int, int, int, int],
                  vertical_hint: bool = False) -> PdiRegion:
-    """Re-localize text lines inside a learned-detector ROI using only PDI."""
+    """Relocaliza linhas em uma ROI do detector usando somente PDI."""
     x, y, w, h = [int(v) for v in roi]
     x0, y0 = max(0, x), max(0, y)
     x1, y1 = min(page.shape[1], x + w), min(page.shape[0], y + h)
@@ -153,7 +153,7 @@ def _overlap(a: tuple[int, int, int, int], b: tuple[int, int, int, int]) -> floa
 
 
 def localize_page(page: np.ndarray) -> list[PdiRegion]:
-    """Generate regions with thresholding, morphology and components."""
+    """Gera regiões com limiarização, morfologia e componentes."""
     gray = normalize_crop(page)
     regions: list[PdiRegion] = []
 

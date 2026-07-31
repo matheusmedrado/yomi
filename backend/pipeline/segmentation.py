@@ -1,4 +1,4 @@
-"""Thresholding, morphology, connected components and watershed helpers."""
+"""Funções auxiliares de limiarização, morfologia, CCs e watershed."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -8,12 +8,12 @@ import numpy as np
 
 
 # ---------------------------------------------------------------------------
-# Data
+# Dados
 # ---------------------------------------------------------------------------
 
 @dataclass(frozen=True)
 class TextRegion:
-    """A bounding box in the original image, in (x, y, w, h) format."""
+    """Caixa na imagem original, no formato (x, y, w, h)."""
     x: int
     y: int
     w: int
@@ -39,7 +39,7 @@ class TextRegion:
         }
 
 
-# Module-level counter so each detection pass produces unique ids.
+# Contador do módulo para gerar IDs únicos a cada detecção.
 _id_counter = 0
 
 
@@ -50,12 +50,12 @@ def _next_id() -> int:
 
 
 # ---------------------------------------------------------------------------
-# Lab 06 — Otsu threshold
+# Lab 06 — limiar de Otsu
 # ---------------------------------------------------------------------------
 
 def otsu_threshold(gray_or_mask: np.ndarray,
                    invert: bool | None = None) -> np.ndarray:
-    """Automatic Otsu threshold on a grayscale image or already-binary mask.
+    """Limiar automático de Otsu em imagem cinza ou máscara binária.
 
     If the input is already binary (only 0/255) this is essentially a no-op
     and the function returns a copy. Otherwise it computes Otsu's threshold
@@ -73,8 +73,7 @@ def otsu_threshold(gray_or_mask: np.ndarray,
             gray_or_mask, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
         )
     if invert is None:
-        # Convention: ink (text) is white in the mask. Flip if the input
-        # appears to be the opposite.
+        # Convenção: tinta (texto) é branca na máscara. Inverte se necessário.
         frac_white = float(np.count_nonzero(binary)) / binary.size
         if frac_white > 0.5:
             binary = cv2.bitwise_not(binary)
@@ -84,13 +83,13 @@ def otsu_threshold(gray_or_mask: np.ndarray,
 
 
 # ---------------------------------------------------------------------------
-# Lab 07 — morphology
+# Lab 07 — morfologia
 # ---------------------------------------------------------------------------
 
 def morphology_cleanup(binary: np.ndarray,
                        open_k: int = 3,
                        close_k: int = 5) -> np.ndarray:
-    """Clean a binary mask with opening + closing (Lab 07).
+    """Limpa uma máscara binária com abertura e fechamento (Lab 07).
 
     Opening removes single-pixel noise; closing fills tiny holes inside ink
     strokes. The kernel sizes are deliberately small to avoid merging nearby
@@ -106,14 +105,14 @@ def morphology_cleanup(binary: np.ndarray,
 
 
 # ---------------------------------------------------------------------------
-# Lab 02 — connected components
+# Lab 02 — componentes conectados
 # ---------------------------------------------------------------------------
 
 def connected_components(binary: np.ndarray, min_area: int = 30,
                          max_area: int | None = None,
                          min_aspect: float = 0.05,
                          max_aspect: float = 20.0) -> list[TextRegion]:
-    """Label connected components and return the surviving ones as TextRegion.
+    """Rotula componentes conectados e retorna os aprovados como TextRegion.
 
     Filters:
       - drops anything smaller than `min_area` (Lab 02);
@@ -141,14 +140,13 @@ def connected_components(binary: np.ndarray, min_area: int = 30,
 
 
 # ---------------------------------------------------------------------------
-# Lab 08 — watershed for touching text
+# Lab 08 — watershed para texto encostado
 # ---------------------------------------------------------------------------
 
 def _looks_like_text_blob(region: TextRegion, binary: np.ndarray,
                           min_fill: float = 0.15,
                           max_fill: float = 0.85) -> bool:
-    """Heuristic: a blob that is mostly filled with ink is probably several
-    merged characters/lines and is a good candidate for watershed splitting."""
+    """Heurística para identificar um componente denso, candidato a watershed."""
     x, y, w, h = region.x, region.y, region.w, region.h
     crop = binary[y:y + h, x:x + w]
     if crop.size == 0:
@@ -158,7 +156,7 @@ def _looks_like_text_blob(region: TextRegion, binary: np.ndarray,
 
 
 def watershed_split(binary: np.ndarray, region: TextRegion) -> list[TextRegion]:
-    """Apply distance-transform + watershed to a single component (Lab 08).
+    """Aplica transformada de distância e watershed em um componente (Lab 08).
 
     Returns the original region if watershed could not produce new ones.
     """
@@ -186,8 +184,7 @@ def watershed_split(binary: np.ndarray, region: TextRegion) -> list[TextRegion]:
         if m <= 1:  # background / boundary
             continue
         mask = (markers == m).astype(np.uint8) * 255
-        # Snap to the original crop's bounding box to drop the boundary
-        # pixels that watershed marks as -1.
+        # Limita à caixa original para descartar bordas marcadas com -1.
         ys, xs = np.where(mask > 0)
         if len(xs) < 8:
             continue
@@ -200,7 +197,7 @@ def watershed_split(binary: np.ndarray, region: TextRegion) -> list[TextRegion]:
 
 
 # ---------------------------------------------------------------------------
-# Speech-bubble detection (Labs 02, 06, 07)
+# Detecção de balões de fala (Labs 02, 06 e 07)
 # ---------------------------------------------------------------------------
 
 def _enclosed_uniform_regions(gray: np.ndarray, bright: bool,
@@ -211,7 +208,7 @@ def _enclosed_uniform_regions(gray: np.ndarray, bright: bool,
                               min_solidity: float,
                               min_interior_frac: float,
                               ) -> list[TextRegion]:
-    """Find enclosed, uniformly-colored regions (bubble interiors).
+    """Encontra regiões fechadas de cor uniforme, interiores dos balões.
 
     A speech bubble is, classically:
       - a large connected region of near-white (or near-black) pixels,
@@ -226,7 +223,7 @@ def _enclosed_uniform_regions(gray: np.ndarray, bright: bool,
         m = (gray >= thresh).astype(np.uint8) * 255
     else:
         m = (gray <= thresh).astype(np.uint8) * 255
-    # Close small gaps in the bubble outline (anti-aliasing breaks, tails).
+    # Fecha pequenas falhas no contorno do balão e nas caudas.
     m = cv2.morphologyEx(m, cv2.MORPH_CLOSE,
                          cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7)))
 
@@ -251,8 +248,7 @@ def _enclosed_uniform_regions(gray: np.ndarray, bright: bool,
         solidity = area / hull_area
         if solidity < min_solidity:
             continue
-        # Interior uniformity: fraction of the bbox dominated by the
-        # bubble color. Bubbles are plain inside; art is not.
+        # Uniformidade interna: fração da caixa dominada pela cor do balão.
         gray_crop = gray[y:y + h, x:x + w]
         if bright:
             interior = float(np.count_nonzero(gray_crop >= thresh)) / (w * h)
@@ -275,7 +271,7 @@ def find_speech_bubbles(gray: np.ndarray,
                         white_interior: float = 0.60,
                         black_interior: float = 0.72,
                         ) -> list[TextRegion]:
-    """Detect white and black (inverted-text) speech bubbles on a page.
+    """Detecta balões brancos e pretos, com texto invertido, em uma página.
 
     Returns bubble-level `TextRegion`s — exactly the granularity manga-ocr
     was trained on, and exactly what the hover UI wants. Regions detected on
@@ -295,18 +291,18 @@ def find_speech_bubbles(gray: np.ndarray,
         min_interior_frac=black_interior,
     )
     out = bubbles + dark
-    # Rough reading order: top-to-bottom, right-to-left (manga).
+    # Ordem aproximada de mangá: cima para baixo e direita para esquerda.
     out.sort(key=lambda r: (r.y, -r.x))
     return out
 
 
 # ---------------------------------------------------------------------------
-# Group components into text lines (or vertical columns)
+# Agrupamento de componentes em linhas de texto (ou colunas verticais)
 # ---------------------------------------------------------------------------
 
 def cluster_lines(regions: list[TextRegion], gap_factor: float = 0.7,
                   vertical: bool = False) -> list[list[TextRegion]]:
-    """Greedy clustering of components into lines.
+    """Agrupamento guloso de componentes em linhas.
 
     Components whose y-overlap (for horizontal text) or x-overlap (for
     vertical text) is large enough are merged into the same line. `gap_factor`
@@ -323,19 +319,19 @@ def cluster_lines(regions: list[TextRegion], gap_factor: float = 0.7,
         return max(0, min(b, d) - max(a, c))
 
     if vertical:
-        # group by x-overlap, sort by y.
+        # Agrupa pela sobreposição em x e ordena por y.
         def key(r: TextRegion) -> tuple[int, int]:
             return (r.x, r.y)
         primary_axis = lambda r: (r.x, r.x + r.w)
         secondary_axis = lambda r: (r.y, r.y + r.h)
     else:
-        # group by y-overlap, sort by x.
+        # Agrupa pela sobreposição em y e ordena por x.
         def key(r: TextRegion) -> tuple[int, int]:
             return (r.y, r.x)
         primary_axis = lambda r: (r.y, r.y + r.h)
         secondary_axis = lambda r: (r.x, r.x + r.w)
 
-    # Sort by primary axis, then secondary, for stable clustering.
+    # Ordena pelo eixo principal e depois pelo secundário.
     ordered = sorted(regions, key=key)
     lines: list[list[TextRegion]] = []
     current: list[TextRegion] = [ordered[0]]
@@ -355,7 +351,7 @@ def cluster_lines(regions: list[TextRegion], gap_factor: float = 0.7,
             current_span = span
     lines.append(current)
 
-    # Sort within each line along the reading direction.
+    # Ordena cada linha na direção de leitura.
     for line in lines:
         if vertical:
             line.sort(key=lambda r: r.y)
@@ -365,7 +361,7 @@ def cluster_lines(regions: list[TextRegion], gap_factor: float = 0.7,
 
 
 # ---------------------------------------------------------------------------
-# Top-level: from page to text regions
+# Nível principal: da página às regiões de texto
 # ---------------------------------------------------------------------------
 
 def detect_text_regions(gray: np.ndarray, mask: np.ndarray | None = None,
@@ -379,7 +375,7 @@ def detect_text_regions(gray: np.ndarray, mask: np.ndarray | None = None,
                         remove_rules: bool = False,
                         rule_len: int | None = None,
                         ) -> list[TextRegion]:
-    """Extract candidate text regions from a grayscale image or mask."""
+    """Extrai regiões candidatas de uma imagem cinza ou máscara."""
     if mask is not None and mask.shape[:2] != gray.shape[:2]:
         mask = cv2.resize(mask, (gray.shape[1], gray.shape[0]),
                           interpolation=cv2.INTER_NEAREST)
@@ -392,11 +388,8 @@ def detect_text_regions(gray: np.ndarray, mask: np.ndarray | None = None,
 
     work = binary
     if remove_rules:
-        # Rule-line removal (Lab 07): morphological opening with long, thin
-        # structuring elements keeps only strokes with a continuous straight
-        # run of `rule_len` pixels — bubble outlines, panel frames, divider
-        # lines, speedlines. Text strokes are much shorter and survive.
-        # This is the classical document-analysis trick.
+        # Remove linhas longas com abertura morfológica: contornos de balões,
+        # quadros, divisórias e linhas de velocidade.
         if rule_len is None:
             rule_len = max(30, w_img // 40)
         horiz = cv2.morphologyEx(
@@ -408,7 +401,7 @@ def detect_text_regions(gray: np.ndarray, mask: np.ndarray | None = None,
             cv2.getStructuringElement(cv2.MORPH_RECT, (1, rule_len)),
         )
         rules = cv2.bitwise_or(horiz, vert)
-        # Grow the rule mask slightly so anti-aliased edges go away too.
+        # Expande a máscara de linhas para remover também suas bordas suaves.
         rules = cv2.dilate(rules, np.ones((3, 3), np.uint8), iterations=1)
         work = cv2.bitwise_and(work, cv2.bitwise_not(rules))
 
@@ -442,6 +435,6 @@ def detect_text_regions(gray: np.ndarray, mask: np.ndarray | None = None,
             split.extend(watershed_split(binary, b))
         kept = split
 
-    # Rough reading order: top-to-bottom; right-to-left for vertical text.
+    # Ordem aproximada: cima para baixo e direita para esquerda.
     kept.sort(key=lambda r: (r.y, -r.x if vertical else r.x))
     return kept
