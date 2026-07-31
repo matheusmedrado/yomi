@@ -24,6 +24,7 @@ local/
 *.md
 !README.md
 !docs/**/*.md
+!presentation/**/*.md
 
 # ----- Editor / OS -----
 .DS_Store
@@ -44,6 +45,8 @@ backend/one_piece_1188.py
 # ----- Scripts (local utilities) -----
 scripts/*
 !scripts/evaluate_conditioning.py
+!scripts/evaluate_robustness.py
+!scripts/create_degraded_sample.py
 
 # Generated visual proof for local presentations.
 presentation_artifacts/

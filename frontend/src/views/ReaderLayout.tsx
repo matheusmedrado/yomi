@@ -8,6 +8,7 @@ import { ArrowLeft, Keyboard, Layers } from "lucide-react";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
+import { DEBUG_STAGE_INFO } from "../debugStages";
 
 export function ReaderLayout() {
   const reset = useStore((s) => s.reset);
@@ -64,7 +65,7 @@ export function ReaderLayout() {
         <div className="flex items-center gap-3">
           {debugStage && (
             <span className="font-mono text-[10px] text-ink-muted uppercase tracking-smallcaps">
-              debug · {debugStage}
+              debug · {DEBUG_STAGE_INFO[debugStage].title}
             </span>
           )}
           <button
@@ -130,7 +131,7 @@ export function ReaderLayout() {
                     ["0", "Resetar zoom"],
                     ["b", "Mostrar todas as regiões"],
                     ["f", "Modo foco"],
-                    ["d", "Ciclo de estágio de debug"],
+                    ["d", "Avançar na explicação visual"],
                     ["Tab", "Próxima região de texto"],
                     ["Shift+Tab", "Região de texto anterior"],
                     ["Enter", "Criar card da região focada"],

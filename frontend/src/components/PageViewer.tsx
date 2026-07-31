@@ -5,29 +5,22 @@ import { debugImageUrl, getRegions, ocr, pageImageUrl } from "../api";
 import { TextOverlay } from "./TextOverlay";
 import { Eye, EyeOff, Focus, ScanSearch } from "lucide-react";
 import type { DetectionMode, TextRegion } from "../types";
+import {
+  DEBUG_STAGE_INFO,
+  debugStagesFor,
+  nextDebugStage,
+} from "../debugStages";
 
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 5;
-const DEBUG_ORDER = [
-  "conditioning_overlay",
-  "conditioning_raw",
-  "conditioning_enhanced",
-  "conditioning_mask",
-  "conditioning_components",
-  "conditioning_projection",
-  "conditioning_final",
-  "otsu",
-  "mask",
-  "cc",
-  "watershed",
-] as const;
 const CLICK_THRESHOLD = 6;
 const CLICK_TIME = 400;
-const MODE_LABELS: Record<DetectionMode, string> = {
-  hybrid: "Hybrid · DL + PDI",
-  baseline: "Baseline · crop cru",
-  pdi_only: "PDI-only · experimental",
-};
+const MODE_OPTIONS: Array<{ mode: DetectionMode; label: string }> = [
+  { mode: "baseline", label: "Sem PDI · original" },
+  { mode: "median_restore", label: "Com PDI · mediana" },
+  { mode: "hybrid", label: "Híbrido · experimento anterior" },
+  { mode: "pdi_only", label: "PDI-only · experimental" },
+];
 
 const regionKey = (mode: DetectionMode, page: number, regionId: number) =>
   `${mode}:${page}:${regionId}`;
@@ -102,7 +95,8 @@ export function PageViewer() {
     hoverRef.current = null;
     setHoverId(null);
     setKeyboardFocusId(null);
-  }, [currentPage, detectionMode]);
+    setDebugStage(null);
+  }, [currentPage, detectionMode, setDebugStage]);
 
   useEffect(() => {
     const el = stageRef.current;
@@ -353,6 +347,11 @@ export function PageViewer() {
   const currentResult = cacheKey ? ocrCache[cacheKey] ?? null : null;
   const overlayLoading =
     activeId !== null && loadingId === activeId && !currentResult;
+  const debugInfo = debugStage ? DEBUG_STAGE_INFO[debugStage] : null;
+  const debugSequence = debugStagesFor(detectionMode);
+  const debugPosition = debugStage
+    ? debugSequence.indexOf(debugStage) + 1
+    : 0;
 
   return (
     <div className="relative flex-1 h-full bg-ink/[0.03] overflow-hidden">
@@ -386,8 +385,8 @@ export function PageViewer() {
           className="max-w-[180px] bg-transparent font-mono text-[10px] text-ink-muted px-1.5 py-1 outline-none focus:ring-2 focus:ring-vermilion/50 rounded"
           title="Modo de detecção e preparação para OCR"
         >
-          {(Object.keys(MODE_LABELS) as DetectionMode[]).map((mode) => (
-            <option key={mode} value={mode}>{MODE_LABELS[mode]}</option>
+          {MODE_OPTIONS.map(({ mode, label }) => (
+            <option key={mode} value={mode}>{label}</option>
           ))}
         </select>
         <span className="w-px h-5 bg-ink/15 mx-1" />
@@ -444,25 +443,14 @@ export function PageViewer() {
           <Focus className="h-4 w-4" />
         </button>
         <button
-          onClick={() => {
-            if (debugStage === null) {
-              setDebugStage(DEBUG_ORDER[0]);
-            } else {
-              const idx = DEBUG_ORDER.indexOf(
-                debugStage as (typeof DEBUG_ORDER)[number],
-              );
-              setDebugStage(
-                idx >= 0 && idx < DEBUG_ORDER.length - 1
-                  ? DEBUG_ORDER[idx + 1]
-                  : null,
-              );
-            }
-          }}
+          onClick={() =>
+            setDebugStage(nextDebugStage(detectionMode, debugStage))
+          }
           className={[
             "kd-btn-ghost focus:outline-none focus:ring-2 focus:ring-vermilion/50 rounded",
             debugStage ? "!text-ink underline underline-offset-4" : "",
           ].join(" ")}
-          title="Estágios de debug (d)"
+          title="Avançar na explicação visual (D)"
         >
           <ScanSearch className="h-4 w-4" />
         </button>
@@ -560,13 +548,38 @@ export function PageViewer() {
             <FocusMask region={activeRegion} pageSize={pageSize} />
           )}
 
-          {debugStage && (
-            <img
-              src={debugImageUrl(sessionId, currentPage, debugStage, detectionMode)}
-              alt={`Estágio: ${debugStage}`}
-              draggable={false}
-              className="absolute inset-0 w-full h-full object-fill mix-blend-multiply opacity-90 pointer-events-none"
-            />
+          {debugStage && debugInfo && (
+            <div className="absolute inset-0 z-20 flex flex-col bg-paper/95 border-2 border-vermilion/60 pointer-events-none">
+              <div className="flex-1 min-h-0 p-4 flex items-center justify-center bg-ink/[0.04]">
+                <img
+                  src={debugImageUrl(sessionId, currentPage, debugStage, detectionMode)}
+                  alt={`Estágio: ${debugInfo.title}`}
+                  draggable={false}
+                  className="max-w-full max-h-full object-contain bg-white shadow-editorial"
+                />
+              </div>
+              <div className="shrink-0 bg-paper px-5 py-3 border-t border-ink/15">
+                <div className="flex items-start justify-between gap-5">
+                  <div>
+                    <p className="font-serif font-bold text-sm text-ink">
+                      {debugInfo.title}
+                    </p>
+                    <p className="mt-1 text-xs text-ink-muted leading-relaxed">
+                      {debugInfo.description}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-mono text-[10px] text-vermilion">
+                      {debugInfo.course}
+                    </p>
+                    <p className="mt-1 font-mono text-[10px] text-ink-muted">
+                      D · {debugPosition}/{debugSequence.length} ·{" "}
+                      {debugPosition === debugSequence.length ? "fechar" : "avançar"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>

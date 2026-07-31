@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useStore } from "../store";
+import { nextDebugStage } from "../debugStages";
 
 export function useKeyboardShortcuts() {
   const currentPage = useStore((s) => s.currentPage);
@@ -8,6 +9,8 @@ export function useKeyboardShortcuts() {
   const toggleShowAllBoxes = useStore((s) => s.toggleShowAllBoxes);
   const toggleFocusMode = useStore((s) => s.toggleFocusMode);
   const debugStage = useStore((s) => s.debugStage);
+  const detectionMode = useStore((s) => s.detectionMode);
+  const setDebugStage = useStore((s) => s.setDebugStage);
   const view = useStore((s) => s.view);
   const activeCardId = useStore((s) => s.activeCardId);
   const setActiveCardId = useStore((s) => s.setActiveCardId);
@@ -57,17 +60,7 @@ export function useKeyboardShortcuts() {
           toggleFocusMode();
           break;
         case "d": {
-          const order: (typeof debugStage)[] = [
-            "otsu",
-            "mask",
-            "cc",
-            "watershed",
-            "conditioning_overlay",
-            null,
-          ];
-          const idx = debugStage ? order.indexOf(debugStage) : -1;
-          const next = order[(idx + 1) % order.length];
-          useStore.setState({ debugStage: next });
+          setDebugStage(nextDebugStage(detectionMode, debugStage));
           break;
         }
       }
@@ -82,6 +75,8 @@ export function useKeyboardShortcuts() {
     toggleShowAllBoxes,
     toggleFocusMode,
     debugStage,
+    detectionMode,
+    setDebugStage,
     activeCardId,
     setActiveCardId,
   ]);

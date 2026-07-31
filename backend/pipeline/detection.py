@@ -12,6 +12,7 @@ import numpy as np
 
 from .conditioning import ConditioningResult, condition_crop, raw_fallback
 from .pdi_localization import localize_page, localize_roi
+from .robustness import restore
 
 log = logging.getLogger(__name__)
 
@@ -47,8 +48,12 @@ TEXT_HEIGHT = 64
 MAX_RATIO_VERT = 16
 MAX_RATIO_HOR = 8
 ANCHOR_WINDOW = 2
-DETECTION_MODES = ("baseline", "hybrid", "pdi_only")
-DEFAULT_DETECTION_MODE = os.environ.get("YOMI_DETECTION_MODE", "hybrid")
+DETECTION_MODES = ("baseline", "median_restore", "hybrid", "pdi_only")
+# Nas páginas digitais limpas avaliadas, o condicionamento completo não reduziu
+# o CER agregado. O baseline é, portanto, o padrão seguro; o modo hybrid fica
+# disponível como experimento PDI explícito e pode ser ativado pela interface ou
+# por YOMI_DETECTION_MODE=hybrid.
+DEFAULT_DETECTION_MODE = os.environ.get("YOMI_DETECTION_MODE", "baseline")
 HYBRID_RELOCALIZE_LINES = os.environ.get("YOMI_HYBRID_RELOCALIZE_LINES", "0") == "1"
 
 
@@ -64,12 +69,15 @@ class DetectedBlock:
     font_size: int
     crops: List[np.ndarray] = None  # type: ignore
     conditioning: List[ConditioningResult] = None  # type: ignore
+    original_crops: List[np.ndarray] = None  # type: ignore
 
     def __post_init__(self) -> None:
         if self.crops is None:
             self.crops = []
         if self.conditioning is None:
             self.conditioning = []
+        if self.original_crops is None:
+            self.original_crops = []
 
     @property
     def cx(self) -> float:
@@ -219,6 +227,13 @@ def detect_blocks(img: np.ndarray,
             )
             if mode == "baseline":
                 block.crops.append(horizontal_raw)
+            elif mode == "median_restore":
+                # Demonstração controlada: o CBZ degradado recebe ruído
+                # sal-e-pimenta e este é o restaurador clássico correspondente.
+                # A detecção continua igual; somente o recorte enviado ao OCR
+                # passa pelo filtro, preservando uma comparação justa.
+                block.original_crops.append(horizontal_raw)
+                block.crops.append(restore(horizontal_raw, "salt_pepper"))
             else:
                 max_ratio = MAX_RATIO_VERT if vertical else MAX_RATIO_HOR
                 _condition_line(block, horizontal_raw, max_ratio, li)

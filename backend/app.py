@@ -437,8 +437,12 @@ def register_routes(app: Flask) -> None:
             return jsonify({"error": "session not found"}), 404
         if page < 1 or page > len(files):
             return jsonify({"error": "page out of range"}), 404
-        available = list(pipeline_debug.STAGES) + sorted(pipeline_debug.CONDITIONING_STAGES)
-        if stage not in pipeline_debug.STAGES and stage not in pipeline_debug.CONDITIONING_STAGES:
+        available = (list(pipeline_debug.STAGES)
+                     + sorted(pipeline_debug.CONDITIONING_STAGES)
+                     + sorted(pipeline_debug.RESTORATION_STAGES))
+        if (stage not in pipeline_debug.STAGES
+                and stage not in pipeline_debug.CONDITIONING_STAGES
+                and stage not in pipeline_debug.RESTORATION_STAGES):
             return jsonify({
                 "error": f"unknown stage {stage!r}",
                 "available": available,
@@ -447,7 +451,12 @@ def register_routes(app: Flask) -> None:
         if mode is None:
             return jsonify({"error": f"mode must be one of {DETECTION_MODES}"}), 400
         try:
-            if stage in pipeline_debug.CONDITIONING_STAGES:
+            if stage in pipeline_debug.RESTORATION_STAGES:
+                blocks = _compute_blocks(session_id, page, mode)
+                if blocks is None:
+                    return jsonify({"error": "session/page not found"}), 404
+                stage_img = pipeline_debug.restoration_stage(stage, blocks)
+            elif stage in pipeline_debug.CONDITIONING_STAGES:
                 img = _get_page_image(session_id, page)
                 blocks = _compute_blocks(session_id, page, mode)
                 if img is None or blocks is None:

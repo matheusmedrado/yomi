@@ -6,7 +6,11 @@ export interface TextRegion {
   h: number;
 }
 
-export type DetectionMode = "hybrid" | "baseline" | "pdi_only";
+export type DetectionMode =
+  | "baseline"
+  | "median_restore"
+  | "hybrid"
+  | "pdi_only";
 
 export type ScriptType = "hiragana" | "katakana" | "kanji" | "other";
 
@@ -52,9 +56,13 @@ export interface RegionsResponse {
 }
 
 export type DebugStage =
+  | "restoration_original"
+  | "restoration_filtered"
+  | "restoration_comparison"
   | "gray"
   | "mask"
   | "otsu"
+  | "morphology"
   | "cc"
   | "watershed"
   | "conditioning_raw"

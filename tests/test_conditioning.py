@@ -102,7 +102,7 @@ def test_raw_fallback_is_logged_only_when_conditioning_throws(monkeypatch, caplo
     monkeypatch.setattr(detection, "condition_crop", explode)
     with caplog.at_level(logging.WARNING, logger="pipeline.detection"):
         blocks = detection.detect_blocks(np.full((100, 100, 3), 255, np.uint8),
-                                         detector=_FakeDetector())
+                                         detector=_FakeDetector(), mode="hybrid")
     result = blocks[0].conditioning[0]
     assert result.used_raw
     assert np.array_equal(result.crops[0], result.raw)

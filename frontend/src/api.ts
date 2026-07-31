@@ -37,7 +37,7 @@ export function regionImageUrl(
   sessionId: string,
   page: number,
   regionId: number,
-  mode: DetectionMode = "hybrid",
+  mode: DetectionMode = "baseline",
 ): string {
   return `${API}/region_image/${sessionId}/${page}/${regionId}?mode=${mode}`;
 }
@@ -46,7 +46,7 @@ export function debugImageUrl(
   sessionId: string,
   page: number,
   stage: string,
-  mode: DetectionMode = "hybrid",
+  mode: DetectionMode = "baseline",
 ): string {
   return `${API}/debug/${stage}/${sessionId}/${page}?mode=${mode}`;
 }
@@ -54,7 +54,7 @@ export function debugImageUrl(
 export function getRegions(
   sessionId: string,
   page: number,
-  mode: DetectionMode = "hybrid",
+  mode: DetectionMode = "baseline",
 ): Promise<RegionsResponse> {
   return postJson<RegionsResponse>("/regions", {
     session_id: sessionId,
@@ -67,7 +67,7 @@ export function ocr(
   sessionId: string,
   page: number,
   regionId: number,
-  mode: DetectionMode = "hybrid",
+  mode: DetectionMode = "baseline",
 ): Promise<OcrResult> {
   return postJson<OcrResult>("/ocr", {
     session_id: sessionId,

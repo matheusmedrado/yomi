@@ -33,6 +33,17 @@ def stage_otsu(path, target: int = 1200) -> np.ndarray:
         mask = cv2.resize(mask, (gray.shape[1], gray.shape[0]),
                           interpolation=cv2.INTER_NEAREST)
     binary = segmentation.otsu_threshold(mask)
+    return cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
+
+
+def stage_morphology(path, target: int = 1200) -> np.ndarray:
+    """Mostra a máscara após abertura e fechamento (Lab 07)."""
+    img = _load_image(path)
+    gray, mask = preprocess.preprocess_page(img, target_longest=target)
+    if mask.shape[:2] != gray.shape[:2]:
+        mask = cv2.resize(mask, (gray.shape[1], gray.shape[0]),
+                          interpolation=cv2.INTER_NEAREST)
+    binary = segmentation.otsu_threshold(mask)
     binary = segmentation.morphology_cleanup(binary)
     return cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
 
@@ -74,6 +85,7 @@ STAGES = {
     "gray": stage_gray,
     "mask": stage_mask,
     "otsu": stage_otsu,
+    "morphology": stage_morphology,
     "cc": stage_cc,
     "watershed": stage_watershed,
 }
@@ -86,6 +98,12 @@ CONDITIONING_STAGES = {
     "conditioning_projection",
     "conditioning_final",
     "conditioning_overlay",
+}
+
+RESTORATION_STAGES = {
+    "restoration_original",
+    "restoration_filtered",
+    "restoration_comparison",
 }
 
 
@@ -117,6 +135,56 @@ def _crop_board(crops: list[np.ndarray]) -> np.ndarray:
         tiles.append(crop)
     gap = np.full((height, 8, 3), 230, dtype=np.uint8)
     return np.concatenate([tile for pair in zip(tiles, [gap] * len(tiles)) for tile in pair][:-1], axis=1)
+
+
+def _labeled_board(label: str, crops: list[np.ndarray]) -> np.ndarray:
+    board = _crop_board(crops)
+    out = np.full((board.shape[0] + 42, board.shape[1], 3), 255, dtype=np.uint8)
+    out[42:] = board
+    cv2.putText(out, label, (10, 27), cv2.FONT_HERSHEY_SIMPLEX,
+                0.58, (35, 35, 35), 1, cv2.LINE_AA)
+    return out
+
+
+def _stack_boards(boards: list[np.ndarray]) -> np.ndarray:
+    width = max(board.shape[1] for board in boards)
+    padded = []
+    for board in boards:
+        out = np.full((board.shape[0], width, 3), 245, dtype=np.uint8)
+        out[:, :board.shape[1]] = board
+        padded.append(out)
+    gap = np.full((10, width, 3), 210, dtype=np.uint8)
+    rows: list[np.ndarray] = []
+    for index, board in enumerate(padded):
+        if index:
+            rows.append(gap)
+        rows.append(board)
+    return np.vstack(rows)
+
+
+def restoration_stage(stage: str, blocks) -> np.ndarray:
+    """Renderiza os pixels usados na comparação sem PDI × mediana."""
+    if stage not in RESTORATION_STAGES:
+        raise ValueError(f"unknown restoration stage: {stage}")
+
+    originals = [
+        crop for block in blocks
+        for crop in (getattr(block, "original_crops", None) or block.crops)
+    ]
+    filtered = [crop for block in blocks for crop in block.crops]
+    if not originals or not filtered:
+        return _status_board("Nenhum recorte de OCR disponível")
+
+    # Limita o painel para continuar legível e rápido em páginas densas.
+    originals = originals[:10]
+    filtered = filtered[:10]
+    original_board = _labeled_board("SEM PDI - recortes originais", originals)
+    filtered_board = _labeled_board("COM PDI - mediana 3x3", filtered)
+    if stage == "restoration_original":
+        return original_board
+    if stage == "restoration_filtered":
+        return filtered_board
+    return _stack_boards([original_board, filtered_board])
 
 
 def conditioning_stage(stage: str, page_bgr: np.ndarray, blocks) -> np.ndarray:

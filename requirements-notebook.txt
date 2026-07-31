@@ -1,0 +1,4 @@
+-r requirements.txt
+
+# Ambiente de exploração e apresentação acadêmica.
+jupyterlab>=4.0

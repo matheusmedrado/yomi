@@ -72,6 +72,40 @@ def test_baseline_mode_keeps_raw_crops_without_conditioning():
     assert blocks and blocks[0].crops and not blocks[0].conditioning
 
 
+def test_median_restore_mode_filters_crop_before_ocr():
+    class FakeLineBlock:
+        xyxy = (0, 0, 80, 70)
+        vertical = False
+        font_size = 12
+
+        def lines_array(self):
+            return [object()]
+
+        def get_transformed_region(self, image, _line_index, _height):
+            return image[:64, :80]
+
+    class FakeDetector:
+        available = True
+
+        def detect(self, image):
+            empty = np.zeros(image.shape[:2], np.uint8)
+            return empty, empty, [FakeLineBlock()]
+
+    image = np.full((100, 100, 3), 127, dtype=np.uint8)
+    image[20, 20] = 255
+    expected = cv2.cvtColor(
+        cv2.medianBlur(cv2.cvtColor(image[:64, :80], cv2.COLOR_BGR2GRAY), 3),
+        cv2.COLOR_GRAY2BGR,
+    )
+
+    blocks = detect_blocks(image, detector=FakeDetector(), mode="median_restore")
+
+    assert blocks and len(blocks[0].crops) == 1
+    assert np.array_equal(blocks[0].crops[0], expected)
+    assert np.array_equal(blocks[0].original_crops[0], image[:64, :80])
+    assert not blocks[0].conditioning
+
+
 def test_pdi_only_mode_does_not_call_detector(monkeypatch):
     image = np.full((120, 240, 3), 255, dtype=np.uint8)
     cv2.putText(image, "PDI", (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.4,
